@@ -1,0 +1,72 @@
+17:22:49 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+17:22:55 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+08:06:51 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+08:43:20 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+09:17:40 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+09:18:47 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+09:22:46 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 
+09:28:55 **** Incremental Build of configuration Debug for project yeni_kart ****
+make -j8 all 
+arm-none-eabi-size   yeni_kart.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4256	     20	   1572	   5848	   16d8	yeni_kart.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
+ 

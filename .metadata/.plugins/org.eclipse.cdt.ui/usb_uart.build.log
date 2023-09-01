@@ -1,0 +1,18 @@
+08:38:03 **** Incremental Build of configuration Debug for project usb_uart ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F207xx -c -I../Core/Inc -I../Drivers/STM32F2xx_HAL_Driver/Inc -I../Drivers/STM32F2xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F2xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/stm32f2xx_hal_msp.c" -mcpu=cortex-m3 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F207xx -c -I../Core/Inc -I../Drivers/STM32F2xx_HAL_Driver/Inc -I../Drivers/STM32F2xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F2xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f2xx_hal_msp.d" -MT"Core/Src/stm32f2xx_hal_msp.o" --specs=nano.specs -mfloat-abi=soft -mthumb -o "Core/Src/stm32f2xx_hal_msp.o"
+arm-none-eabi-gcc -o "usb_uart.elf" @"objects.list"   -mcpu=cortex-m3 -T"C:\Users\deniz.gurhan.CIZGI\Desktop\Workspace_1_11_0\usb_uart\STM32F207ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="usb_uart.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: usb_uart.elf
+ 
+arm-none-eabi-size   usb_uart.elf 
+arm-none-eabi-objdump -h -S  usb_uart.elf  > "usb_uart.list"
+   text	   data	    bss	    dec	    hex	filename
+   7008	     28	   1644	   8680	   21e8	usb_uart.elf
+Finished building: default.size.stdout
+ 
+Finished building: usb_uart.list
+ 
+
+08:38:04 Build Finished. 0 errors, 0 warnings. (took 1s.709ms)
+

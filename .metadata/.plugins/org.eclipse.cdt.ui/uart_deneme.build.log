@@ -1,0 +1,10 @@
+11:09:02 **** Incremental Build of configuration Debug for project uart_deneme ****
+make -j8 all 
+arm-none-eabi-size   uart_deneme.elf 
+   text	   data	    bss	    dec	    hex	filename
+   9876	     28	   1644	  11548	   2d1c	uart_deneme.elf
+Finished building: default.size.stdout
+ 
+
+11:09:02 Build Finished. 0 errors, 0 warnings. (took 381ms)
+

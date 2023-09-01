@@ -1,0 +1,10 @@
+13:31:04 **** Incremental Build of configuration Debug for project bl_driver ****
+make -j8 all 
+arm-none-eabi-size   bl_driver.elf 
+   text	   data	    bss	    dec	    hex	filename
+   4204	     20	   1572	   5796	   16a4	bl_driver.elf
+Finished building: default.size.stdout
+ 
+
+13:31:04 Build Finished. 0 errors, 0 warnings. (took 315ms)
+

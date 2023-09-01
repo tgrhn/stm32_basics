@@ -1,0 +1,10 @@
+09:19:51 **** Build of configuration Debug for project ic_pwm_button ****
+make -j8 all 
+arm-none-eabi-size   ic_pwm_button.elf 
+   text	   data	    bss	    dec	    hex	filename
+  16300	     20	   1748	  18068	   4694	ic_pwm_button.elf
+Finished building: default.size.stdout
+ 
+
+09:19:52 Build Finished. 0 errors, 0 warnings. (took 466ms)
+
