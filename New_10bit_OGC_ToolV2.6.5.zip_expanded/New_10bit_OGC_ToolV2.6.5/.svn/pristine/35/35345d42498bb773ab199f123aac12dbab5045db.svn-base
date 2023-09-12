@@ -1,0 +1,426 @@
+#ifndef _OGCOCC_EXPORT_H
+#define _OGCOCC_EXPORT_H
+typedef unsigned char BYTE;
+
+#define _ON                     1
+#define _OFF                    0
+#define DEBUG_ON                _ON
+#define PRINT_LUT               _ON
+
+//#define _LOCAL_DIMMING          7
+#define _CA310_xy               0.05
+#define _CA310_Lv               0.005
+
+enum TYPE
+{
+    OGC = 0,
+    OCC,
+    DICOM,
+    OGC_RGB_GAIN,
+    RGB_GAMMA,
+    HDR,
+    _LOCAL_DIMMING,
+    FREESYNC2,
+};
+
+typedef enum
+{
+    _R,
+    _G,
+    _B,
+    _GRAY,
+}Channel;
+
+typedef enum
+{
+    _OGC_CAL,
+    _OCC_CAL,
+    _DICOM_CAL,
+    _HDR_CAL,
+    _UNIFORMITY_CAL,
+}EnumCaliType;
+
+
+enum OGC_PATTERN
+{
+    START = 0,
+    RED,
+    BLACK,
+    BLUE,
+    GREEN,
+    WHITE,
+    GRAY1,
+
+    SRGB0 = 29,
+    SRGB6 = 35,
+    SRGB20 = 49,
+
+    _OGC_VERIFY_GRAY0 = 36,
+    _OGC_VERIFY_END = 72,
+
+    _OCC_VERIFY_PATTERN1,
+    _OCC_VERIFY_END = 80,
+
+    _RED_1 = 81,
+    _RED_2,
+    _RED_3,
+    _RED_4,
+    _RED_5,
+    _RED_6,
+    _RED_7,
+    _RED_8,
+    _RED_9,
+    _RED_10,
+    _RED_11,
+    _RED_12,
+    _RED_13,
+    _RED_14,
+    _RED_15,
+
+
+    _GREEN_1 = 101,
+    _GREEN_2,
+    _GREEN_3,
+    _GREEN_4,
+    _GREEN_5,
+    _GREEN_6,
+    _GREEN_7,
+    _GREEN_8,
+    _GREEN_9,
+    _GREEN_10,
+    _GREEN_11,
+    _GREEN_12,
+    _GREEN_13,
+    _GREEN_14,
+    _GREEN_15,
+
+
+    _BLUE_1 = 121,
+    _BLUE_2,
+    _BLUE_3,
+    _BLUE_4,
+    _BLUE_5,
+    _BLUE_6,
+    _BLUE_7,
+    _BLUE_8,
+    _BLUE_9,
+    _BLUE_10,
+    _BLUE_11,
+    _BLUE_12,
+    _BLUE_13,
+    _BLUE_14,
+    _BLUE_15,
+    _END_COMMAND = 0x8F,
+};
+
+typedef enum
+{
+	_SRGB,
+    _ADOBERGB,
+    _USER_DEFINE,
+    _EBU,
+	_SOFT_PROOF,
+	_REC_709,
+	_DCI_P3,
+	_SMPTE_C,
+	_USER_DEFINE_2,
+	_BYPASS,
+	_TOTAL_COLORSPACE_NUM,
+	_PANEL_ORG = _TOTAL_COLORSPACE_NUM,
+	_MEASURED,
+	_HDR_SRGB,
+	_HDR_ADOBERGB,
+	_HDR_DCIP3_D65,
+	_HDR_BT2020,
+}COLORSPACE;
+
+typedef enum
+{
+    _sRGB_EOTF,
+    _BT709_EOTF,
+    _GAMMA22_EOTF,
+    _GAMMA26_EOTF,
+    _PQ_INTERIM,
+}EOTF;
+
+typedef struct
+{
+    float Lv;
+    float x;
+    float y;
+}Lvxy;
+
+
+typedef struct
+{
+	int R;
+    int G;
+    int B;
+    float Lv;
+    float Sx;
+    float Sy;
+	int lT;
+    float u;
+    float v;
+    float duv;
+}COLOR_INPUT_STRUCT;
+
+typedef struct
+{
+	float XYZ[3];
+	float Lab[3];
+	float CH[2];
+	float DeltaE76;
+	float DeltaE94;
+	float DeltaE00;
+}COLOR_OUTPUT_STRUCT;
+
+typedef struct
+{
+	float pfConH[5];
+	float pfConL[5];
+	float fMaxPanelLv;
+    int nMaxPanelPQCode;
+    float fMinPanelLv;
+    int nMinPanelPQCode;
+    float fMaxContentLv;
+    int nMaxContentPQCode;
+    float fMinContentLv;
+    int nMinContentPQCode;
+    int pnIGLUT[129];
+    int pnTHD[2];
+	BYTE ucMode;
+    BYTE ucByPass;
+}HDR_STRUCT;
+
+typedef struct
+{
+    int pnIGLUT[129];
+    int pnTHD[2];
+}FS2_STRUCT;
+
+enum OCCLUT
+{
+    _LEVEL_HIGH = 0,
+    _LEVEL_LOW,
+    _LEVEL_MID,
+};
+
+enum OCCTYPE
+{
+    _SRGB_ONLY = 0,
+    _ADOBE_ONLY,
+    _SRGB_AND_ADOBE
+};
+
+typedef enum
+{
+    _SHIFT_0_BIT = 0,
+    _SHIFT_1_BIT,
+    _SHIFT_2_BIT,
+    _SHIFT_3_BIT
+}Enum_Precision;
+typedef enum
+{
+    _ROUNDING,
+    _CEILING,
+    _BOTTOM,
+    _CEILING_8,
+    _BOTTOM_8,
+
+}Enum_ROUND;
+
+
+//Gamma
+typedef void(*func_rtdGammaSetGrayPattern)(int *nPattern, int nPatternNum);
+typedef BYTE(*func_rtdGammaGetGrayPatternNum)(void);
+typedef void(*func_rtdGammaGetGrayPattern)(int *nPattern);
+typedef void(*func_rtdGammaSetLockEnd)(bool bLockTop);
+typedef void(*func_rtdGammaSetLUTCompensate)(bool bLUTCompen);
+typedef void(*func_rtdGammaSetFreesyncIIEDIDLv)(float MinFS2Lv, float MaxFS2Lv);
+typedef void(*func_rtdGammaSetMinLv)(bool bSetMinLv,float *MinimunLv, float x_Range, float y_Range);
+typedef bool(*func_rtdGammaSetGammaIndex)(BYTE ucIndex, float fGammaIndex);
+typedef float(*func_rtdGammaGetGammaIndex)(BYTE ucIndex);
+typedef void(*func_rtdGammaSetGammaNum)(BYTE ucNum);
+typedef BYTE(*func_rtdGammaGetGammaNum)(void);
+typedef void(*func_rtdGammaSetCTNum)(BYTE ucNum);
+typedef BYTE(*func_rtdGammaGetCTNum)(void);
+typedef void(*func_rtdGammaSetTxy)(float *Txy, BYTE ucNum);
+typedef float(*func_rtdGammaGetTxy)(int nCTIndex, int nXorY);
+typedef void(*func_rtdGammaSetPanelBitNum)(int nBitNum);
+typedef int(*func_rtdGammaGetPanelBitNum)(void);
+typedef void(*func_rtdGammaSetEOTF)(BYTE ucEOTF);
+typedef BYTE(*func_rtdGammaGetEOTF)(void);
+typedef void(*func_rtdGammaSetOCCLockCT)(bool bLockCT);
+typedef bool(*func_rtdGammaGetOCCLockCT)(void);
+
+typedef void(*func_rtdGammaSetNoInterpolationMode)(bool bIfNotInterpolate);
+typedef bool(*func_rtdGammaGetNoInterpolationMode)(void);
+
+typedef void(*func_rtdDICOMSetDICOMMode)(bool bIfByGray); // Hung
+typedef void(*func_rtdDICOMSetDICOMxy)(bool bIfLockCT, float *xy); // Hung
+typedef void(*func_rtdDICOMSetDICOMLimitLv)(bool bIfLimitLv, float MaxLv); // Hung
+typedef void(*func_rtdDICOMSetDICOMAL)(float Lv); // Hung
+typedef float(*func_rtdDICOMGetDICOMAL)(void);
+typedef float(*func_rtdDICOMGetDICOMRef)(int code); // Hung
+typedef float(*func_rtdDICOMGetMinJND)(void);
+typedef float(*func_rtdDICOMGetMaxJND)(void);
+typedef float(*func_rtdDICOMGetJNDStep)(void);
+
+typedef int(*func_rtdGammaPatternWhite)(Lvxy Lvxy, BYTE ucType, BYTE *Command);
+typedef void(*func_rtdGammaPatternRGB)(Lvxy Lvxy, BYTE ucColorIndex);
+typedef int(*func_rtdGammaPatternRGBScale)(Lvxy Lvxy, BYTE ucCodeIndex, BYTE *Command);
+typedef void(*func_rtdGammaGetHDRInitial)(int nHighLvIndex, HDR_STRUCT *strHDR);
+typedef void(*func_rtdGammaGetInputGammaToneMappingLUT)(HDR_STRUCT *strHDR);
+typedef float(*func_rtdGammaGetMaxPanelLvPQ)(float MaxPanelLv, int nCodeLevel);
+typedef void(*func_rtdGammaGetNoToneMappingBound)(float fMaxLv, int nCodeLevel, int *nLowerUpperBound);
+typedef BYTE(*func_rtdGammaGetMaxPanelLvEDIDCV)(float MaxPanelLv, int nCodeLevel, bool bCeiling);
+typedef void(*func_rtdGammaGetLocalDimmingIGLUT)(HDR_STRUCT *strHDR, int nIndex);
+typedef void(*func_rtdGammaGetFreesync2IGLUT)(FS2_STRUCT *strFS2, BYTE ucIndex);
+typedef int(*func_rtdGammaPatternGray)(Lvxy Lvxy, BYTE ucGrayIndex, BYTE *Command, BYTE ucType);
+
+typedef float(*func_rtdGammaGetWhiteX)(void);
+typedef float(*func_rtdGammaGetWhiteY)(void);
+typedef float(*func_rtdGammaGetWhiteLv)(void);
+
+typedef void(*func_rtdGammaClearPara)(void);
+typedef void(*func_rtdGammaSetIDNum)(BYTE ucType);
+typedef BYTE(*func_rtdGammaCalculateTotalCheckSum)(BYTE ucType, BYTE ucGammaNum);
+typedef void(*func_rtdGammaGetOGCLUT)(int **ROGCLUT, int **GOGCLUT, int **BOGCLUT);
+typedef void(*func_rtdGammaGetDICOMLUT)(int *RLUT, int *GLUT, int *BLUT);
+typedef void(*func_rtdGammaGetOCCLUT)(int *RLUT, int *GLUT, int *BLUT);
+typedef bool(*func_rtdGammaGetPanelNativeError)(void);
+typedef void(*func_rtdGammaGetFixedMeasureData)(float fMeasure[][3], float fMeasure10bit[][3]);
+typedef void(*func_rtdGammaSet1To7PatternGray)(Lvxy Lvxy, BYTE ucIndex);
+typedef void(*func_rtdGammaSetLUTDecayMode)(bool bIfDecayMode, BYTE ucIndex);
+
+// ColorMap
+typedef void(*func_rtdColormapClearPara)();
+typedef short(*func_rtdColormapGetCofficient)(BYTE ucColorSpace, BYTE Row, BYTE ucCol);
+typedef double(*func_rtdColormapGetPanelMatrix)(BYTE Row, BYTE ucCol);
+typedef short(*func_rtdColormapGetLUTCofficient)(BYTE ucColorSpace, BYTE k, BYTE j, BYTE i);
+typedef BYTE(*func_rtdColormapGetColorSpace)(void);
+typedef void(*func_rtdColormapSetColorSpace)(BYTE ucColor);
+
+typedef void(*func_rtdColormapSetUserColorSpace )(BYTE ucColorType, double Batch[3][3], float RGBxy[4][2]);
+typedef void(*func_rtdColormapSetUserDefineGamut )(float *fRGBWxy, int nIndex);
+typedef void(*func_rtdColormapGetUserDefineGamut )(float *fRGBWxy, int nIndex);
+typedef void(*func_rtdColormapSetPanelOrgGamut )(float *fRGBWxy);
+typedef void(*func_rtdColormapGetPanelOrgGamut )(float *fRGBWxy);
+
+typedef void(*func_rtdColormapSetBatchLvxy)(int Index, float Lv, float x, float y);
+typedef void(*func_rtdColormapGetColorMatrix)(float Batch7[][3], BYTE ucPCMType, BYTE ucPrecision);            // will be set in function SetColorSpace()
+typedef void(*func_rtdColormapGetHDRColorMatrix)(float Batch7[][3], BYTE ucPrecision, float fMaxPanelLvPQ);            // will be set in function SetColorSpace()
+typedef void(*func_rtdColormapGetHDRTargetXYZ)(BYTE ucColorSpace, float NonlinearRGB[3], float TargetXYZ[3]);
+typedef void(*func_rtdColormapSaveMatrix)(BYTE ucLevel, BYTE ucType, BYTE ucPrecision);
+typedef void(*func_rtdColormapSetSoftProofMatrix)(float fMatrix[][3]);
+typedef void(*func_rtdColormapSetBlueCompensate)(bool bIsCompensate);
+typedef void(*func_rtdColormapSetHDRsRGBpanel)(bool bIssRGBpanel);
+
+
+typedef void(*func_rtdColormapSetWhiteLvxy)(float Lv, float x, float y);
+
+// SRGB
+typedef void(*func_rtdsRGBColorClearPara)();
+typedef void(*func_rtdsRGBColorSetWhiteLv)(float fLv);
+typedef void(*func_rtdsRGBColorSetInput)(COLOR_INPUT_STRUCT *strInput);
+typedef void(*func_rtdsRGBColorgetValues)(BYTE ucColorSpace, BYTE ucPanelBitNum);
+typedef void(*func_rtdsRGBColorGetOutput)(COLOR_OUTPUT_STRUCT *strOutput);
+
+extern func_rtdGammaSetGrayPattern g_rtdGammaSetGrayPattern;
+extern func_rtdGammaGetGrayPatternNum g_rtdGammaGetGrayPatternNum;
+extern func_rtdGammaGetGrayPatternNum g_rtdGammaGetGrayPatternNum;
+extern func_rtdGammaGetGrayPattern g_rtdGammaGetGrayPattern;
+extern func_rtdGammaSetGammaNum g_rtdGammaSetGammaNum;
+extern func_rtdGammaGetGammaNum g_rtdGammaGetGammaNum;
+extern func_rtdGammaSetGammaIndex g_rtdGammaSetGammaIndex;
+extern func_rtdGammaGetGammaIndex g_rtdGammaGetGammaIndex;
+extern func_rtdGammaSetCTNum g_rtdGammaSetCTNum;
+extern func_rtdGammaGetCTNum g_rtdGammaGetCTNum;
+extern func_rtdGammaSetTxy g_rtdGammaSetTxy;
+extern func_rtdGammaGetTxy g_rtdGammaGetTxy;
+extern func_rtdGammaSetPanelBitNum g_rtdGammaSetPanelBitNum;
+extern func_rtdGammaGetPanelBitNum g_rtdGammaGetPanelBitNum;
+extern func_rtdGammaSetEOTF g_rtdGammaSetEOTF;
+extern func_rtdGammaGetEOTF g_rtdGammaGetEOTF;
+extern func_rtdGammaSetOCCLockCT g_rtdGammaSetOCCLockCT;
+extern func_rtdGammaGetOCCLockCT g_rtdGammaGetOCCLockCT;
+
+extern func_rtdGammaSetNoInterpolationMode g_rtdGammaSetNoInterpolationMode;
+extern func_rtdGammaGetNoInterpolationMode g_rtdGammaGetNoInterpolationMode;
+
+extern func_rtdGammaSetGammaIndex g_rtdGammaSetGammaIndex;
+extern func_rtdGammaGetGammaIndex g_rtdGammaGetGammaIndex;
+extern func_rtdGammaSetLockEnd g_rtdGammaSetLockEnd;
+extern func_rtdGammaSetLUTCompensate g_rtdGammaSetLUTCompensate;
+extern func_rtdGammaSetFreesyncIIEDIDLv g_rtdGammaSetFreesyncIIEDIDLv;
+extern func_rtdGammaSetMinLv g_rtdGammaSetMinLv;
+extern func_rtdDICOMSetDICOMMode g_rtdDICOMSetDICOMMode; // Hung
+extern func_rtdDICOMSetDICOMxy g_rtdDICOMSetDICOMxy; // Hung
+extern func_rtdDICOMSetDICOMLimitLv g_rtdDICOMSetDICOMLimitLv; // Hung
+extern func_rtdDICOMSetDICOMAL g_rtdDICOMSetDICOMAL; // Hung
+extern func_rtdDICOMGetDICOMAL g_rtdDICOMGetDICOMAL;
+extern func_rtdDICOMGetDICOMRef g_rtdDICOMGetDICOMRef; // Hung
+extern func_rtdDICOMGetMinJND g_rtdDICOMGetMinJND;
+extern func_rtdDICOMGetMaxJND g_rtdDICOMGetMaxJND;
+extern func_rtdDICOMGetJNDStep g_rtdDICOMGetJNDStep;
+extern func_rtdGammaPatternWhite g_rtdGammaPatternWhite;
+extern func_rtdGammaPatternRGB g_rtdGammaPatternRGB;
+extern func_rtdGammaPatternRGBScale g_rtdGammaPatternRGBScale;
+extern func_rtdGammaGetInputGammaToneMappingLUT  g_rtdGammaGetInputGammaToneMappingLUT;
+extern func_rtdGammaGetMaxPanelLvPQ  g_rtdGammaGetMaxPanelLvPQ;
+extern func_rtdGammaGetNoToneMappingBound g_rtdGammaGetNoToneMappingBound;
+extern func_rtdGammaGetMaxPanelLvEDIDCV g_rtdGammaGetMaxPanelLvEDIDCV;
+extern func_rtdGammaGetHDRInitial g_rtdGammaGetHDRInitial;
+extern func_rtdGammaGetLocalDimmingIGLUT  g_rtdGammaGetLocalDimmingIGLUT;
+extern func_rtdGammaGetFreesync2IGLUT  g_rtdGammaGetFreesync2IGLUT;
+
+extern func_rtdGammaPatternGray g_rtdGammaPatternGray;
+extern func_rtdGammaGetWhiteLv g_rtdGammaGetWhiteLv;
+extern func_rtdGammaGetWhiteX g_rtdGammaGetWhiteX;
+extern func_rtdGammaGetWhiteY g_rtdGammaGetWhiteY;
+extern func_rtdGammaClearPara g_rtdGammaClearPara;
+extern func_rtdGammaSetIDNum g_rtdGammaSetIDNum;
+extern func_rtdGammaCalculateTotalCheckSum g_rtdGammaCalculateTotalCheckSum;
+extern func_rtdGammaGetOGCLUT g_rtdGammaGetOGCLUT;
+extern func_rtdGammaGetDICOMLUT g_rtdGammaGetDICOMLUT;
+extern func_rtdGammaGetOCCLUT g_rtdGammaGetOCCLUT;
+extern func_rtdGammaGetPanelNativeError g_rtdGammaGetPanelNativeError;
+extern func_rtdGammaGetFixedMeasureData g_rtdGammaGetFixedMeasureData;
+extern func_rtdGammaSet1To7PatternGray g_rtdGammaSet1To7PatternGray;
+extern func_rtdGammaSetLUTDecayMode g_rtdGammaSetLUTDecayMode;
+
+extern func_rtdColormapClearPara g_rtdColormapClearPara;
+extern func_rtdColormapGetCofficient g_rtdColormapGetCofficient;
+extern func_rtdColormapGetPanelMatrix g_rtdColormapGetPanelMatrix;
+extern func_rtdColormapGetLUTCofficient g_rtdColormapGetLUTCofficient;
+extern func_rtdColormapGetColorSpace g_rtdColormapGetColorSpace;
+extern func_rtdColormapSetColorSpace g_rtdColormapSetColorSpace;
+
+extern func_rtdColormapSetUserColorSpace g_rtdColormapSetUserColorSpace;
+extern func_rtdColormapSetUserDefineGamut g_rtdColormapSetUserDefineGamut;
+extern func_rtdColormapGetUserDefineGamut g_rtdColormapGetUserDefineGamut;
+extern func_rtdColormapSetPanelOrgGamut g_rtdColormapSetPanelOrgGamut;
+extern func_rtdColormapGetPanelOrgGamut g_rtdColormapGetPanelOrgGamut;
+
+extern func_rtdColormapSetBatchLvxy g_rtdColormapSetBatchLvxy;
+extern func_rtdColormapGetColorMatrix g_rtdColormapGetColorMatrix;
+extern func_rtdColormapGetHDRColorMatrix g_rtdColormapGetHDRColorMatrix;
+extern func_rtdColormapGetHDRTargetXYZ g_rtdColormapGetHDRTargetXYZ;
+extern func_rtdColormapSaveMatrix g_rtdColormapSaveMatrix;
+extern func_rtdColormapSetSoftProofMatrix g_rtdColormapSetSoftProofMatrix;
+extern func_rtdColormapSetBlueCompensate g_rtdColormapSetBlueCompensate;
+extern func_rtdColormapSetHDRsRGBpanel g_rtdColormapSetHDRsRGBpanel;
+
+extern func_rtdColormapSetWhiteLvxy g_rtdColormapSetWhiteLvxy;
+extern func_rtdsRGBColorClearPara g_rtdsRGBColorClearPara;
+extern func_rtdsRGBColorSetInput g_rtdsRGBColorSetInput;
+extern func_rtdsRGBColorGetOutput g_rtdsRGBColorGetOutput;
+extern func_rtdsRGBColorSetWhiteLv g_rtdsRGBColorSetWhiteLv;
+extern func_rtdsRGBColorgetValues g_rtdsRGBColorgetValues;
+extern float JND1024[1024];
+
+HINSTANCE InitOGCOCCDLL(LPCTSTR szDLLName);
+VOID FreeOGCOCCDLL(HINSTANCE hInst);
+
+#endif

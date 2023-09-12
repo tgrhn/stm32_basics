@@ -1,0 +1,807 @@
+/********************************************************************************/
+/*   The  Software  is  proprietary,  confidential,  and  valuable to Realsil   */
+/*   Semiconductor  Corporation  ("Realsil").  All  rights, including but not   */
+/*   limited  to  copyrights,  patents,  trademarks, trade secrets, mask work   */
+/*   rights, and other similar rights and interests, are reserved to Realsil.   */
+/*   Without  prior  written  consent  from  Realsil,  copying, reproduction,   */
+/*   modification,  distribution,  or  otherwise  is strictly prohibited. The   */
+/*   Software  shall  be  kept  strictly  in  confidence,  and  shall  not be   */
+/*   disclosed to or otherwise accessed by any third party.                     */
+/*   c<2003> - <2014>                                                           */
+/*   The Software is provided "AS IS" without any warranty of any kind,         */
+/*   express, implied, statutory or otherwise.                                  */
+/********************************************************************************/
+
+#ifndef _COMMON_H_
+#define _COMMON_H_
+
+//#include "RegDef.h"
+#include <vcl.h>
+//#pragma hdrstop
+//////////////////////////////////////////////////////////////////////////
+// Error message used in whole system
+//////////////////////////////////////////////////////////////////////////
+typedef enum
+{
+    _ERROR_START = 0,
+	_ERROR_SUCCESS = _ERROR_START,
+    _ERROR_COMMONFUNC_CMD,
+    _ERROR_COMMONFUNC_OUTPUT,
+    _ERROR_COMMONFUNC_POLLINGFAIL,
+    _ERROR_COMM_NOTEXIST, // 4
+    _ERROR_COMM_LOADDLL_FAIL,
+    _ERROR_COMM_NO_INITIAL,
+    _ERROR_COMM_PARAMETER,
+    _ERROR_COMM_UNSUPPORT_DEBUGMODE,
+	_ERROR_COMM_SET_IICADDR, 
+    _ERROR_COMM_ENTER_ISP_MODE,
+    _ERROR_COMM_UNSUPPORT_MCUREGACCESSMODE,
+    _ERROR_COMM_AUTO_DETECT_SLAVE_ADDRESS_FAIL,
+    _ERROR_COMM_DDCCI_READ_CHECKSUM_ERROR,
+    _ERROR_COMM_DDCCI_READ_SLAVE_ADDRESS,
+
+    _ERROR_PLUGIN_EDPISP_ENTERNISP = 0x100,
+    _ERROR_PLUGIN_EDPISP_OPENFWFILE,
+    _ERROR_PLUGIN_EDPISP_OPENEDIDFILE,
+    _ERROR_PLUGIN_EDPISP_OPENFILELENGTH,
+    _ERROR_PLUGIN_EDPISP_SCALERTYPE,
+    _ERROR_PLUGIN_EDPISP_CHECKEDIDFILE,
+    _ERROR_PLUGIN_EDPISP_RESETBOOTLOADER,
+    _ERROR_PLUGIN_EDPISP_FIRSTBYTECHECK,
+    _ERROR_PLUGIN_EDPISP_1STEEPROMCHECK,
+    _ERROR_PLUGIN_EDPISP_2NDEEPROMCHECK,
+    _ERROR_PLUGIN_EDPISP_CHECKI2CSTATUS,
+    _ERROR_PLUGIN_EDPISP_USERSTOP,
+    _ERROR_PLUGIN_EDPISP_IICCMDINCOMPLETE,
+
+    _ERROR_PLUGIN_CTRLREG_COMMON_PORT = 0x200,
+    _ERROR_PLUGIN_CTRLREG_COMMON_PAGE,
+    _ERROR_PLUGIN_CTRLREG_PAGESELECTNOTFIND,
+    _ERROR_PLUGIN_CTRLREG_PAGEDATANOTFIND,
+    _ERROR_PLUGIN_CTRLREG_UNSUPPORT_PORTINPORT,
+    _ERROR_PLUGIN_CTRLREG_UNSUPPORT_PAGEINPAGE,
+    _ERROR_PLUGIN_CTRLREG_REGNAME,
+    _ERROR_PLUGIN_CTRLREG_WRITEREG,
+    _ERROR_PLUGIN_CTRLREG_USERSTOP,
+    _ERROR_PLUGIN_CTRLREG_UNPORT,
+    _ERROR_PLUGIN_CTRLREG_SCALERTYPE,
+    _ERROR_PLUGIN_CTRLREG_READ_PORT_FAIL,
+    _ERROR_PLUGIN_CTRLREG_PROCESS_QUIT,
+    _ERROR_PLUGIN_CTRLREG_FIND_NO_MCU_PAGE,
+    _ERROR_PLUGIN_CTRLREG_ADDR_OUT_OF_RANGE,
+	
+    _ERROR_PLUGIN_MCU_ENTERISP = 0x300,
+    _ERROR_PLUGIN_MCU_PARAMETER,
+	_ERROR_PLUGIN_MCU_OPENFILE,
+    _ERROR_PLUGIN_MCU_USERSTOP,
+    _ERROR_PLUGIN_MCU_DEBUG_MODE_ERROR,
+    _ERROR_PLUGIN_MCU_SELECT_FILE,
+    _ERROR_PLUGIN_MCU_REGISTER_WRTIE,
+
+    _ERROR_PLUGIN_EFUSE_OPENFILE = 0x400,
+    _ERROR_PLUGIN_EFUSE_FILETYPE,
+    _ERROR_PLUGIN_EFUSE_LOCKEFUSE,
+    _ERROR_PLUGIN_EFUSE_ISPTIMES,
+    _ERROR_PLUGIN_EFUSE_ISPBIT,
+    _ERROR_PLUGIN_EFUSE_PROGRAMBIT,
+    _ERROR_PLUGIN_EFUSE_UNLOCKEFUSE,
+    _ERROR_PLUGIN_EFUSE_CHECKSUM,
+	_ERROR_PLUGIN_EFUSE_DATAINVALID,
+    _ERROR_PLUGIN_EFUSE_SCALERTYPE,
+	_ERROR_PLUGIN_EFUSE_ENTERISP,
+    _ERROR_PLUGIN_EFUSE_USERCANCEL,
+    _ERROR_PLUGIN_EFUSE_ISPDATACHECK,
+	_ERROR_PLUGIN_EFUSE_ISPNOTNEED,
+	_ERROR_PLUGIN_EFUSE_COMPARE,
+	_ERROR_PLUGIN_EFUSE_READFAIL,
+	_ERROR_PLUGIN_EFUSE_BIST_DO_NOTHING,
+	_ERROR_PLUGIN_EFUSE_FACTORY_PART_ZERO,
+    _ERROR_PLUGIN_EFUSE_READ_MAPPING,
+    _ERROR_PLUGIN_EFUSE_CRC,
+    _ERROR_PLUGIN_EFUSE_NOUSE,
+
+    _ERROR_PLUGIN_AUXCONFIG_SCALERTYPE = 0x500,
+    _ERROR_PLUGIN_AUXCONFIG_COMMACCESS,
+	_ERROR_PLUGIN_AUXCONFIG_ENTERISP,
+	_ERROR_PLUGIN_AUXCONFIG_EXITISP,
+    _ERROR_PLUGIN_AUXCONFIG_ENABLE,
+	_ERROR_PLUGIN_AUXCONFIG_SETI2CSLAVEADDR,
+    _ERROR_PLUGIN_AUXCONFIG_OPENFILE,
+    _ERROR_PLUGIN_AUXCONFIG_FILETYPE,
+    _ERROR_PLUGIN_AUXCONFIG_LIGHTUP,
+
+    _ERROR_PLUGIN_DPSTATUS_SCALERTYPE = 0x600,
+
+    _ERROR_COMM_SMBUS_INIT_FAIL = 0x700,
+    _ERROR_COMM_SMBUS_PARAMETER,
+    _ERROR_COMM_SMBUS_READ_FAIL,
+    _ERROR_COMM_SMBUS_WRITE_FAIL,
+    _ERROR_COMM_SMBUS_NOT_SUPPORT,
+    _ERROR_COMM_SMBUS_I2C_PAGELENGTH_UNSUPPORT,
+    _ERROR_COMM_ECSMBUS_HOST_WRITE,
+    _ERROR_COMM_ECSMBUS_HOST_READ,
+    _ERROR_COMM_ECSMBUS_IBF_FULL,
+    _ERROR_COMM_ECSMBUS_OBF_EMPTY,
+    _ERROR_COMM_SMBUS_BLOCK_READ_DATA_LENGTH_ERROR,
+
+    _ERROR_COMM_AUX_INIT_FAIL = 0x800,
+    _ERROR_COMM_AUX_PARAMETER,
+    _ERROR_COMM_AUX_READ_FAIL,
+    _ERROR_COMM_AUX_WRITE_FAIL,
+    _ERROR_COMM_AUX_NOT_SUPPORT,
+    _ERROR_COMM_AUX_NATIVE_WRITE_FAIL,
+    _ERROR_COMM_AUX_NATIVE_READ_FAIL,
+    _ERROR_COMM_AUX_I2C_PAGELENGTH,
+    _ERROR_COMM_AUX_NATIVE_PAGELENGTH,
+
+    _ERROR_PLUGIN_DPCD_USERSTOP = 0x900,
+    _ERROR_PLUGIN_DPCD_FILE_LENGTH,
+    _ERROR_PLUGIN_DPCD_SCALERTYPE,
+	_ERROR_PLUGIN_DPCD_AUXWRITE,
+    _ERROR_PLUGIN_DPCD_LOAD_FILE,
+    _ERROR_PLUGIN_DPCD_ILLEGAL_FILE,
+    _ERROR_PLUGIN_DPCD_WRITE_REG_FAIL,
+
+    _ERROR_PLUGIN_EDID_USERSTOP = 0xA00,
+    _ERROR_PLUGIN_EDID_WRITECHECK,
+    _ERROR_PLUGIN_EDID_IICCMDINCOMPLETE,
+	_ERROR_PLUGIN_EDID_ENABLEDDCRAM,
+	_ERROR_PLUGIN_EDID_DISABLEDDCRAM,
+    _ERROR_PLUGIN_EDID_ILLEGAL_FILE,
+    _ERROR_PLUGIN_EDID_AUX_UNSUPPORT_DERICT_MODE,
+    _ERROR_PLUGIN_EDID_INTERNAL_NOT_WRITE,
+
+    _ERROR_COMM_REALTEKUSB_FAIL_SELECTDEVICE = 0xB00,
+    _ERROR_COMM_REALTEKUSB_NOT_SUPPORT,
+    _ERROR_COMM_REALTEKUSB_INVALID_PARAMETER,
+    _ERROR_COMM_REALTEKUSB_WRITEFILE_FAIL,
+    _ERROR_COMM_REALTEKUSB_WRITEFILE_LENGTH,
+    _ERROR_COMM_REALTEKUSB_READFILE_FAIL,
+    _ERROR_COMM_REALTEKUSB_READFILE_LENGTH,
+    _ERROR_COMM_REALTEKUSB_RECEIVEDATA_CHECKSUM,
+    _ERROR_COMM_REALTEKUSB_I2C_PAGELENGTH_UNSUPPORT,
+    _ERROR_COMM_REALTEKUSB_I2C_READCOUNT,
+    _ERROR_COMM_REALTEKUSB_I2C_SPEED_UNSUPPORT,
+    _ERROR_COMM_REALTEKUSB_RESET_FW,
+    _ERROR_COMM_REALTEKUSB_DRIVER_INSTALL,
+    _ERROR_COMM_REALTEKUSB_I2C_START,//0xB0D
+    _ERROR_COMM_REALTEKUSB_I2C_NOACK,
+    _ERROR_COMM_REALTEKUSB_I2C_POLLING,
+    _ERROR_COMM_REALTEKUSB_I2C_INVALID_PARAMS,
+    _ERROR_COMM_REALTEKUSB_I2C_CHECK_HIGHSCL,
+    _ERROR_COMM_REALTEKUSB_I2C_CHECKSUM,
+
+    _ERROR_MP_EFUSE_LOAD_CONFIGFILE = 0xC00,
+    _ERROR_MP_EFUSE_ILLEGAL_SCALERTYPE,
+    _ERROR_MP_EFUSE_ILLEGAL_FILETYPE,
+    _ERROR_MP_EFUSE_NONE_FILE,
+    _ERROR_MP_EFUSE_ILLEGAL_PROGRAMMETHOD,
+    _ERROR_MP_EFUSE_ILLEGAL_ISPOPTION,
+
+    // ISP
+    _ERROR_PLUGIN_ISP_OPEN_FILE_FAIL= 0xD00,
+    _ERROR_PLUGIN_ISP_CANCEL,
+    _ERROR_PLUGIN_ISP_LOADANSI_FAIL,
+    _ERROR_PLUGIN_ISP_FLASH_MISMATCH_USE_DEFAULT_VALUE,
+    _ERROR_PLUGIN_ISP_WRITE_FIRST_PAGE_ERROR,
+    _ERROR_PLUGIN_ISP_CRC_DIFFERENT_ERASE_FAIL,// 5
+    _ERROR_PLUGIN_ISP_CRC_DIFFERENT_ISP_FAIL,
+    _ERROR_PLUGIN_ISP_FLASH_FILE_ILLEAGL,
+    _ERROR_PLUGIN_ISP_BANK_NO_ENOUGH,
+    // Auto detect which bank need to ISP, when not need, return this
+    _ERROR_PLUGIN_ISP_NO_NEED_CONTINUE,
+    _ERROR_PLUGIN_ISP_PREPARE_DATA_FAIL, // A
+    _ERROR_PLUGIN_ISP_BANK0_NO_ENOUGH_TO_STORE_SETTING,
+    _ERROR_PLUGIN_ISP_SMBUS_SET_BLOCK_TYPE_FAIL,
+    _ERROR_PLUGIN_ISP_SCALER_NOT_SUPPORT,
+    _ERROR_PLUGIN_ISP_FAIL,
+    // Auto search file in current dir, but no file
+    _ERROR_PLUGIN_ISP_AUTO_SEARCH_NO_FILE,
+    // Auto search file in current dir, but no *.h04(if user code begins at 4)
+    _ERROR_PLUGIN_ISP_AUTO_SEARCH_NO_USER_CODE_BEGIN_FILE,// 10
+    _ERROR_PLUGIN_ISP_AUTO_SEARCH_MORETHAN_ONE_FILE_MEET, 
+    _ERROR_PLUGIN_ISP_PARA_ILLEGAL,
+    // For HP AIO, just _SCALER_RL6193, _SCALER_RL6297
+    _ERROR_PLUGIN_ISP_SCALER_IC_MISMATCH,
+    _ERROR_PLUGIN_ISP_UNDEFINE_PNL_MODE,
+    _ERROR_PLUGIN_ISP_ILLEGAL_HP_AIO_BIG_BIN_FILE,
+    _ERROR_PLUGIN_ISP_SCALER_ID_MISMATCH,
+    _ERROR_PLUGIN_ISP_PROJECT_NAME_MISMATCH,
+
+    _ERROR_PLUGIN_EDPEEPROM_SET_DEFAULT_VALUE_FAIL = 0xE00,
+    _ERROR_PLUGIN_EDPEEPROM_LOAD_FILE,
+    _ERROR_PLUGIN_EDPEEPROM_ILLEGAL_FILE,
+    _ERROR_PLUGIN_EDPEEPROM_USERSTOP,
+
+    _ERROR_PLUGIN_ISP_EDID_ENTERNISP = 0xF00,
+    _ERROR_PLUGIN_ISP_EDID_OPENEDIDFILE,
+    _ERROR_PLUGIN_ISP_EDID_ERRORFILELENTH,
+    _ERROR_PLUGIN_ISP_EDID_OPENFLASHDAT,
+    _ERROR_PLUGIN_ISP_EDID_CRC_CHECK_FAIL,
+    _ERROR_PLUGIN_ISP_EDID_FAIL,
+    _ERROR_PLUGIN_ISP_EDID_FLASHSIZE_ERROR,
+
+    _ERROR_GRID_EMPTY_VALUE = 0x1000,
+    _ERROR_GRID_ILLEGAL_VALUE,
+
+    _ERROR_PLUGIN_MP_ISP_CONFIGFILE = 0x1100,
+    _ERROR_PLUGIN_MP_ISP_SCALERTYPE,
+    _ERROR_PLUGIN_MP_ISP_PROGRAMMETHOD,
+    _ERROR_PLUGIN_MP_ISP_PROGRAMFW,
+    _ERROR_PLUGIN_MP_ISP_PROGRAMEDID,
+    _ERROR_PLUGIN_MP_ISP_2NDEEPROMADDR,
+    _ERROR_PLUGIN_MP_ISP_PROGRAMCOUNT,
+    _ERROR_PLUGIN_MP_ISP_1STROMSPEED,
+    _ERROR_PLUGIN_MP_ISP_2NDROMSPEED,
+    _ERROR_PLUGIN_MP_ISP_DELAYTIME,
+
+    _ERROR_PLUGIN_MP_FW_VERSION_CONFIGFILE = 0x1200,
+    _ERROR_PLUGIN_MP_FW_VERSION_SCALERTYPE,
+    _ERROR_PLUGIN_MP_FW_VERSION_PROGRAMMETHOD,
+    _ERROR_PLUGIN_MP_FW_VERSION_DELAYTIME,
+    _ERROR_PLUGIN_MP_FW_VERSION_FWVERSION_FORMAT,
+    _ERROR_PLUGIN_MP_FW_VERSION_FW_COMPARE_FAIL,
+
+    _ERROR_PLUGIN_DEBUG_MESSAGE_CHECKSUM_ERROR = 0x1300,
+	
+    // RTDTool
+    _ERROR_RTDTOOL_FIND_NO_SCALER_INFO = 0x1400,
+    _ERROR_RTDTOOL_MORE_THEN_ONE_SCALER_HAVE_SAME_ID,
+    _ERROR_RTDTOOL_MORE_THEN_ONE_SCALER_HAVE_SAME_NAME,
+    _ERROR_RTDTOOL_CAN_NOT_WRITE_TO_PROGRAM_FILES,
+    // Flash Plugin
+    _ERROR_PLUGIN_FLASH_USER_CANCEL_READING = 0x1500,
+
+    // GT Plugin
+    _ERROR_PLUGIN_GT_CMD_ERROR = 0x1600,
+    _ERROR_PLUGIN_GT_TXT_NO_CMD,
+    _ERROR_PLUGIN_GT_BYTES_TO_WRITE_NO_ENOUGH,
+    _ERROR_PLUGIN_GT_IGNORE_CMD,
+    _ERROR_PLUGIN_GT_READ_CMD_LOST_CHECK_VALUE,
+
+    // Ram Plugin
+    _ERROR_PLUGIN_RAM_ERROR_VALUE = 0x1700,
+    _ERROR_PLUGIN_RAM_MODIFY_REG_FAIL,
+    _ERROR_PLUGIN_RAM_READ_CANCEL,
+
+    _ERROR_PINSHARVERIFY_ERROR_COMPARE_VALUE = 0x1800,
+    _ERROR_PINSHARVERIFY_ERROR_CREATE_REPORT_FILE,
+    _ERROR_PINSHARVERIFY_ERROR_SARADC_INDEX_EMPTY,
+    _ERROR_PINSHARVERIFY_ERROR_SARADC_CLK_DIV_ILLEGAL,
+    _ERROR_PINSHARVERIFY_ERROR_NO_DDC_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_WRITE_READ_DIFFERENT,
+    _ERROR_PINSHARVERIFY_ERROR_NO_I2C_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_ADC_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_INTIRQ_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_TIMER_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_VIHVIL_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_TESTPIN_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_CLKO_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_NO_SLEWCTRL_ENOUGH_INFO,
+    _ERROR_PINSHARVERIFY_ERROR_ADC_TIME_OUT,
+    _ERROR_PINSHARVERIFY_IIC_TRANSCATION_ERROR,
+    _ERROR_PINSHARVERIFY_IIC_TIME_OUT,
+    _ERROR_PINSHARVERIFY_IIC_EEPROM_TEST_FAIL,
+
+    _ERROR_SCOPE_GET_DUTY_FAIL = 0x1900,
+    _ERROR_SCOPE_GET_FREQ_FAIL,
+    _ERROR_INSTRUMENT_INIT_SCOPE_FAIL,
+    _ERROR_INSTRUMENT_INIT_POWERSUPPLY_FAIL,
+    _ERROR_INSTRUMENT_INIT_INSTRUMENT_FAIL,
+    _ERROR_POWERSUPPLY_SET_VOLTAGE_FAIL,
+    _ERROR_INSTRUMENT_ERROR_START,
+    // About instrument
+    // Start
+    _ERROR_INSTRUMENT_INIT_FAIL,
+    _ERROR_POWER_SUPPLY_NOT_SET_OUTPUT_ON,
+    _ERROR_POWER_SUPPLY_SET_VOLT_TIME_OUT,
+    _ERROR_POWER_SUPPLY_GET_PORT_SELECTION_FAIL,
+    _ERROR_POWER_SUPPLY_SET_PORT_SELECTION_FAIL,
+    _ERROR_POWER_SUPPLY_GET_OUTPUT_STATE_FAIL,
+    _ERROR_POWER_SUPPLY_SET_OUTPUT_STATE_FAIL,
+    _ERROR_POWER_SUPPLY_SET_VOLT_FAIL,
+    _ERROR_POWER_SUPPLY_GET_VOLT_FAIL,
+    _ERROR_POWER_SUPPLY_MEASURE_VOLT_FAIL,
+    _ERROR_POWER_SUPPLY_SET_REMOTE_OR_LOCAL_FAIL,
+    _ERROR_POWER_SUPPLY_SET_RANGE_FAIL,
+    _ERROR_POWER_SUPPLY_SET_CURRENT_FAIL,
+    _ERROR_SCOPE_MEASURE_AVERAGE_VOLTAGE_FAIL,
+    _ERROR_SCOPE_SET_THRESHOLD_VALUE_FAIL,
+    _ERROR_SCOPE_MEASURE_FALL_TIME_FAIL,
+    _ERROR_SCOPE_MEASURE_RISE_TIME_FAIL,
+    _ERROR_SCOPE_QUERY_THRESHOLDS_FAIL,
+    _ERROR_SCOPE_SET_CHANNEL_DISPLAY_FAIL,
+    _ERROR_SCOPE_MEAS_CLEAR_FAIL,
+    _ERROR_SCOPE_MEAS_FREQ_FAIL,
+    _ERROR_SCOPE_MEAS_STAT_MEAN_FAIL,
+    _ERROR_SCOPE_GET_MEAS_RESULTS_FAIL,
+    _ERROR_SCOPE_SET_MEASURE_SOURCE_FAIL,
+    // End
+
+    _ERROR_PLUGIN_USBPHY_TIMEOUT = 0x1A00,
+
+
+    _ERROR_PLUGIN_USBMEMORY_DATA_ERROR = 0x1B00,
+	
+    _ERROR_COMM_FTDIUSB_INIT_FAIL = 0x1C00,
+    _ERROR_COMM_FTDIUSB_LOAD_DLL_FAIL,
+    _ERROR_COMM_FTDIUSB_LOAD_FUNC_FAIL,
+    _ERROR_COMM_FTDIUSB_SELECTDEVICE_FAIL,
+    _ERROR_COMM_FTDIUSB_SET_MPSSE_MODE_FAIL,
+    _ERROR_COMM_FTDIUSB_CONFIG_MPSSE_FAIL,
+    _ERROR_COMM_FTDIUSB_SNED_CMD_FAIL,
+    _ERROR_COMM_FTDIUSB_SNED_BYTE_ERROR,
+    _ERROR_COMM_FTDIUSB_ENABLE_LOOPBACK_FAIL,
+    _ERROR_COMM_FTDIUSB_BAD_COMMAND_DETECTION_FAIL,
+    _ERROR_COMM_FTDIUSB_INIT_MPSSE_STATE_FAIL,//0x1B0A
+    _ERROR_COMM_FTDIUSB_SET_CLK_DIVISOR_ERROR,
+    _ERROR_COMM_FTDIUSB_INVALID_PARAMETER,
+    _ERROR_COMM_FTDIUSB_WAIT_READ_QUEUE_TIMEOUT,
+    _ERROR_COMM_FTDIUSB_GET_QUEUE_STATUS_FAIL,
+    _ERROR_COMM_FTDIUSB_READ_FAIL,
+    _ERROR_COMM_FTDIUSB_WRITE_FAIL,
+    _ERROR_COMM_FTDIUSB_I2C_PAGELENGTH_UNSUPPORT,
+    _ERROR_COMM_FTDIUSB_SPEED_NOT_SUPPORT,
+    _ERROR_COMM_FTDIUSB_NOT_SUPPORT,
+    _ERROR_PLUGIN_OD_OPEN_FILE_FAIL = 0x1D00,
+    _ERROR_PLUGIN_OD_ILLEGAL_FILE,
+    _ERROR_PLUGIN_OD_DATA_LEN_ERROR,
+	 
+    _ERROR_PLUGIN_MEASURE_MEAS_ERROR = 0x1E00,
+
+    _ERROR_PLUGIN_AUXSNIFFER_FILE_TYPE = 0x1F00,
+    _ERROR_PLUGIN_AUXSNIFFER_USER_STOP,
+
+    _ERROR_ACEREDID_READ_EXTERNAL_FAIL = 0x2000,
+    _ERROR_ACEREDID_READ_INTERNAL_FAIL,
+    _ERROR_ACEREDID_READ_BOTH_FAIL,
+
+    _ERROR_PLUGIN_GAMMA_OPEN_FILE_FAIL = 0x2100,
+    _ERROR_PLUGIN_GAMMA_CHECK_DATA_FAIL,
+    _ERROR_PLUGIN_GAMMA_SAVE_FILE_FAIL,
+
+    _ERROR_COMM_GFXI2C_INIT_FAIL = 0x2200,
+    _ERROR_COMM_GFXI2C_NOT_SUPPORT,
+    _ERROR_COMM_GFXI2C_PARAMETER,
+    _ERROR_COMM_GFXI2C_I2C_PAGELENGTH,
+    _ERROR_COMM_GFXI2C_WRITE_FAIL,
+    _ERROR_COMM_GFXI2C_READ_FAIL,
+
+    _ERROR_SOCKET_INIT_SOCKET_FAIL = 0x2300,
+    _ERROR_SOCKET_CONNECT_TO_SERVER_FAIL,
+
+    _ERROR_GPIO_I2C_WRITE_FAIL = 0x2400,
+    _ERROR_GPIO_I2C_READ_FAIL,
+    _ERROR_DDCCI_ACCESS_TIME_OUT,
+    _ERROR_DDCCI_CHECK_DATA_FAIL,
+    _ERROR_DATA_OUT_OF_SECTOR,
+    _ERROR_DDCCI_READ_CHECKSUM_ERROR,
+    _ERROR_DDCCI_READ_SLAVE_ADDEESS,
+
+    _ERROR_HDCP_DEBUG_MODE_ERROR = 0x2500,
+    _ERROR_HDCP_DATA_CHECK_ERROR,
+
+
+    _ERROR_END = 0xFFFF,
+}STRUCT_ENUM_ERROR_TYPE;
+#if 0
+typedef struct
+{
+    STRUCT_ENUM_ERROR_TYPE enumError;
+    LPCTSTR lpszErrorName;
+}STRUCT_ERROR;
+
+CONST STRUCT_ERROR ERROR_INFORMATION[] =
+{
+    {_ERROR_SUCCESS, _T("No error!")},
+    {_ERROR_COMMONFUNC_CMD, _T("Invalid command table!")},
+    {_ERROR_COMMONFUNC_OUTPUT, _T("No output buffer!")},
+    {_ERROR_COMMONFUNC_POLLINGFAIL, _T("Polling Mcu Register Cmd Fail!")},
+    {_ERROR_COMM_NOTEXIST, _T("Communication type is not found!")},
+    {_ERROR_COMM_LOADDLL_FAIL, _T("Load communication dll failed!")},
+    {_ERROR_COMM_NO_INITIAL, _T("DLL is not initialized")},
+    {_ERROR_COMM_PARAMETER, _T("Unsupport parameter!")},
+    {_ERROR_COMM_UNSUPPORT_DEBUGMODE, _T("Unsupport debug mode!")},  
+    {_ERROR_COMM_SET_IICADDR, _T("Set IIC Slave address failed!")},  
+    {_ERROR_COMM_ENTER_ISP_MODE, _T("Enter Isp Mode fail!")},
+    {_ERROR_COMM_UNSUPPORT_MCUREGACCESSMODE, _T("Unsupport Mcu Register Accecc mode!")},
+    {_ERROR_COMM_AUTO_DETECT_SLAVE_ADDRESS_FAIL, _T("Auto Detect Slave Address Fail!")},
+    {_ERROR_COMM_DDCCI_READ_CHECKSUM_ERROR, _T("DDCCI Read Checksum Error!")},
+    {_ERROR_COMM_DDCCI_READ_SLAVE_ADDRESS, _T("DDCCI Readm Slave Address Error!")},
+
+    {_ERROR_PLUGIN_EDPISP_ENTERNISP, _T("Enter isp failed!")},
+    {_ERROR_PLUGIN_EDPISP_OPENFWFILE, _T("FW file open failed!")},
+    {_ERROR_PLUGIN_EDPISP_OPENEDIDFILE, _T("EDID file open failed!")},
+    {_ERROR_PLUGIN_EDPISP_OPENFILELENGTH, _T("EDID length is invalid!")},
+    {_ERROR_PLUGIN_EDPISP_SCALERTYPE, _T("Scaler type is not matched!")},
+    {_ERROR_PLUGIN_EDPISP_CHECKEDIDFILE, _T("The EDID file information is not matched!")},
+    {_ERROR_PLUGIN_EDPISP_RESETBOOTLOADER, _T("Reset bootloader failed!")},
+    {_ERROR_PLUGIN_EDPISP_FIRSTBYTECHECK, _T("1st byte check failed!")},
+    {_ERROR_PLUGIN_EDPISP_1STEEPROMCHECK, _T("1st eeprom write failed!")},
+    {_ERROR_PLUGIN_EDPISP_2NDEEPROMCHECK, _T("2nd eeprom write failed")},
+    {_ERROR_PLUGIN_EDPISP_CHECKI2CSTATUS, _T("I2C master status check failed!")},
+    {_ERROR_PLUGIN_EDPISP_USERSTOP, _T("User stop!")},
+    {_ERROR_PLUGIN_EDPISP_IICCMDINCOMPLETE, _T("I2C master command not complete!")},
+
+    {_ERROR_PLUGIN_CTRLREG_COMMON_PORT, _T("Scaler port information error!")},
+    {_ERROR_PLUGIN_CTRLREG_COMMON_PAGE, _T("Scaler page information error!")},
+    {_ERROR_PLUGIN_CTRLREG_PAGESELECTNOTFIND, _T("Page select register is not found!")},
+    {_ERROR_PLUGIN_CTRLREG_PAGEDATANOTFIND, _T("Page data register is not found!")},
+    {_ERROR_PLUGIN_CTRLREG_UNSUPPORT_PORTINPORT, _T("Port in port is not supported!")},
+    {_ERROR_PLUGIN_CTRLREG_UNSUPPORT_PAGEINPAGE, _T("Page in page is not supported!")},
+    {_ERROR_PLUGIN_CTRLREG_REGNAME, _T("Register name is error!")},
+    {_ERROR_PLUGIN_CTRLREG_WRITEREG, _T("Register can not be written!")},
+    {_ERROR_PLUGIN_CTRLREG_USERSTOP, _T("User stop!")},
+    {_ERROR_PLUGIN_CTRLREG_UNPORT, _T("Unknown error!")},
+    {_ERROR_PLUGIN_CTRLREG_SCALERTYPE, _T("Unused error!")},
+    {_ERROR_PLUGIN_CTRLREG_READ_PORT_FAIL, _T("Read port fail!")},
+    {_ERROR_PLUGIN_CTRLREG_PROCESS_QUIT, _T("User cancel!")},
+    {_ERROR_PLUGIN_CTRLREG_FIND_NO_MCU_PAGE, _T("Find no MCU page!")},
+    {_ERROR_PLUGIN_CTRLREG_ADDR_OUT_OF_RANGE, _T("Out of port range!")},
+
+    {_ERROR_PLUGIN_MCU_ENTERISP, _T("Enter isp failed!")},
+    {_ERROR_PLUGIN_MCU_PARAMETER, _T("Invalid Parameter!")},
+    {_ERROR_PLUGIN_MCU_OPENFILE, _T("Open file failed!")},
+    {_ERROR_PLUGIN_MCU_USERSTOP, _T("User Stop!")},
+    {_ERROR_PLUGIN_MCU_DEBUG_MODE_ERROR, _T("Can't Read MCU Through FW when Access Scaler Under ISP Mode!")},
+    {_ERROR_PLUGIN_MCU_SELECT_FILE, _T("Select File Fail!")},
+    {_ERROR_PLUGIN_MCU_REGISTER_WRTIE, _T("Register can't be written!")},
+    
+    {_ERROR_PLUGIN_EFUSE_OPENFILE, _T("Open file failed!")},
+    {_ERROR_PLUGIN_EFUSE_FILETYPE, _T("File Type is wrong!")},
+    {_ERROR_PLUGIN_EFUSE_LOCKEFUSE, _T("Lock Efuse failed!")},
+    {_ERROR_PLUGIN_EFUSE_ISPTIMES, _T("EFuse can not ISP!")},
+    {_ERROR_PLUGIN_EFUSE_ISPBIT, _T("Can't ISP Efuse bit from 1 to 0!")},
+    {_ERROR_PLUGIN_EFUSE_PROGRAMBIT, _T("Program Efuse faied!")},
+    {_ERROR_PLUGIN_EFUSE_UNLOCKEFUSE, _T("Unlock Efuse failed!")},
+    {_ERROR_PLUGIN_EFUSE_CHECKSUM, _T("Checksum check failed!")},
+    {_ERROR_PLUGIN_EFUSE_DATAINVALID, _T("Invalid Data!")},
+    {_ERROR_PLUGIN_EFUSE_SCALERTYPE, _T("Invalid ScalerType!")},
+    {_ERROR_PLUGIN_EFUSE_ENTERISP, _T("Enter isp failed!")},
+    {_ERROR_PLUGIN_EFUSE_USERCANCEL, _T("User Cancel!")},
+    {_ERROR_PLUGIN_EFUSE_ISPDATACHECK, _T("ISP data check failed!")},
+    {_ERROR_PLUGIN_EFUSE_ISPNOTNEED, _T("Don't need ISP!")},
+    {_ERROR_PLUGIN_EFUSE_COMPARE, _T("Compare Efuse Failed!")},
+    {_ERROR_PLUGIN_EFUSE_READFAIL, _T("Efuse Read Failed!")},
+    {_ERROR_PLUGIN_EFUSE_BIST_DO_NOTHING, _T("Efuse BIST Do Nothing!")},
+    {_ERROR_PLUGIN_EFUSE_FACTORY_PART_ZERO, _T("Efuse Factory Part Zero!")},
+    {_ERROR_PLUGIN_EFUSE_READ_MAPPING, _T("Efuse Read Failed!")},
+    {_ERROR_PLUGIN_EFUSE_CRC, _T("Efuse CRC Check Failed!")},
+    {_ERROR_PLUGIN_EFUSE_NOUSE, _T("Efuse error!")},
+
+    {_ERROR_PLUGIN_DPSTATUS_SCALERTYPE, _T("Invalid ScalerType!")},
+
+    {_ERROR_PLUGIN_AUXCONFIG_SCALERTYPE, _T("Invalid ScalerType!")},
+    {_ERROR_PLUGIN_AUXCONFIG_COMMACCESS, _T("Get communication Access Type failed!")},
+    {_ERROR_PLUGIN_AUXCONFIG_ENTERISP, _T("Enter isp failed!")},
+    {_ERROR_PLUGIN_AUXCONFIG_EXITISP, _T("Exit isp failed!")},
+    {_ERROR_PLUGIN_AUXCONFIG_ENABLE, _T("Enable Aux Configure failed!")},
+    {_ERROR_PLUGIN_AUXCONFIG_SETI2CSLAVEADDR, _T("Set IIC Slave address FAILED!")},
+    {_ERROR_PLUGIN_AUXCONFIG_OPENFILE, _T("Open FILE failed!")},
+    {_ERROR_PLUGIN_AUXCONFIG_FILETYPE, _T("File Type is wrong!")},
+    {_ERROR_PLUGIN_AUXCONFIG_LIGHTUP, _T("Eanble LVDS Setting Fail!")},
+
+    {_ERROR_COMM_SMBUS_INIT_FAIL, _T("Smbus Init fail!")},
+    {_ERROR_COMM_SMBUS_PARAMETER, _T("Invalid Parameter!")},
+    {_ERROR_COMM_SMBUS_READ_FAIL, _T("Smbus Read fail!")},
+    {_ERROR_COMM_SMBUS_WRITE_FAIL, _T("Smbus Write fail!")},
+    {_ERROR_COMM_SMBUS_NOT_SUPPORT, _T("Not Support!")},
+    {_ERROR_COMM_SMBUS_I2C_PAGELENGTH_UNSUPPORT, _T("Pagelength UnSupport!")},
+    {_ERROR_COMM_ECSMBUS_HOST_WRITE, _T("EC Smbus Host Write Fail!")},
+    {_ERROR_COMM_ECSMBUS_HOST_READ, _T("EC Smbus Host Write Read!")},
+    {_ERROR_COMM_ECSMBUS_IBF_FULL, _T("EC Smbus Input Buffer Is Full!")},
+    {_ERROR_COMM_ECSMBUS_OBF_EMPTY, _T("EC Smbus Output Buffer Is Empty!")},
+    {_ERROR_COMM_SMBUS_BLOCK_READ_DATA_LENGTH_ERROR, _T("Block Read Data Length Error!")},
+
+
+
+    {_ERROR_COMM_AUX_INIT_FAIL, _T("Aux Init fail!")},
+    {_ERROR_COMM_AUX_PARAMETER, _T("Invalid Parameter!")},
+    {_ERROR_COMM_AUX_READ_FAIL, _T("Aux Read fail!")},
+    {_ERROR_COMM_AUX_WRITE_FAIL, _T("Aux Write fail!")},
+    {_ERROR_COMM_AUX_NOT_SUPPORT, _T("Not Support!")},
+    {_ERROR_COMM_AUX_NATIVE_WRITE_FAIL, _T("Aux Native Write fail!")},
+    {_ERROR_COMM_AUX_NATIVE_READ_FAIL, _T("Aux Native Read fail!")},
+    {_ERROR_COMM_AUX_I2C_PAGELENGTH, _T("Pagelength UnSupport!")},
+    {_ERROR_COMM_AUX_NATIVE_PAGELENGTH, _T("Native Pagelength UnSupport!")},
+
+    {_ERROR_COMM_REALTEKUSB_FAIL_SELECTDEVICE, _T("SelectUsb Device fail!")},
+    {_ERROR_COMM_REALTEKUSB_NOT_SUPPORT, _T("Not Support!")},
+    {_ERROR_COMM_REALTEKUSB_INVALID_PARAMETER, _T("Invalid Parameter!")},
+    {_ERROR_COMM_REALTEKUSB_WRITEFILE_FAIL, _T("Write fail!")},
+    {_ERROR_COMM_REALTEKUSB_WRITEFILE_LENGTH, _T("Write length error!")},
+    {_ERROR_COMM_REALTEKUSB_READFILE_FAIL, _T("Read fail!")},
+    {_ERROR_COMM_REALTEKUSB_READFILE_LENGTH, _T("Read length error!")},
+    {_ERROR_COMM_REALTEKUSB_RECEIVEDATA_CHECKSUM, _T("Received data checksum error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_PAGELENGTH_UNSUPPORT, _T("Not support get length!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_READCOUNT, _T("Read count error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_SPEED_UNSUPPORT, _T("Speed not support!")},
+    {_ERROR_COMM_REALTEKUSB_RESET_FW, _T("Reset FW error!")},
+    {_ERROR_COMM_REALTEKUSB_DRIVER_INSTALL, _T("Install driver error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_START, _T("I2C start error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_NOACK, _T("I2C no ack!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_POLLING, _T("I2C polling error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_INVALID_PARAMS, _T("Invaleid I2C params!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_CHECK_HIGHSCL, _T("Check I2C SCL error!")},
+    {_ERROR_COMM_REALTEKUSB_I2C_CHECKSUM, _T("Check I2C Data CheckSum error!")},
+
+    {_ERROR_PLUGIN_DPCD_USERSTOP, _T("User stop!")},
+    {_ERROR_PLUGIN_DPCD_FILE_LENGTH, _T("File length is not match with scaler!")},
+    {_ERROR_PLUGIN_DPCD_SCALERTYPE, _T("Scaler type is not matched!")},
+    {_ERROR_PLUGIN_DPCD_AUXWRITE, _T("Aux communication can not write the whole DPCD Table!")},
+    {_ERROR_PLUGIN_DPCD_LOAD_FILE, _T("DPCD Laod File Failed!")},
+    {_ERROR_PLUGIN_DPCD_ILLEGAL_FILE, _T("DPCD File Illegal!")},
+    {_ERROR_PLUGIN_DPCD_WRITE_REG_FAIL, _T("DPCD can not write the register!")},
+   
+    {_ERROR_PLUGIN_EDID_USERSTOP, _T("User stop!")},
+    {_ERROR_PLUGIN_EDID_WRITECHECK, _T("Data check failed!")},
+    {_ERROR_PLUGIN_EDID_IICCMDINCOMPLETE, _T("I2C master command not complete!")},
+    {_ERROR_PLUGIN_EDID_ENABLEDDCRAM, _T("Enable DDC Ram Failed!")},
+    {_ERROR_PLUGIN_EDID_DISABLEDDCRAM, _T("Disable DDC Ram Failed!")},
+    {_ERROR_PLUGIN_EDID_ILLEGAL_FILE, _T("EDID File Illegal!")},
+    {_ERROR_PLUGIN_EDID_AUX_UNSUPPORT_DERICT_MODE, _T("Aux not support derict mode read edid!")},
+    {_ERROR_PLUGIN_EDID_INTERNAL_NOT_WRITE, _T("Internal EDID should not be write!")},
+
+    {_ERROR_MP_EFUSE_LOAD_CONFIGFILE, _T("Load configure file fail!")},
+    {_ERROR_MP_EFUSE_ILLEGAL_SCALERTYPE, _T("Illegal scaler type define in config file!")},
+    {_ERROR_MP_EFUSE_ILLEGAL_FILETYPE, _T("Illegal file type define in config file!")},
+    {_ERROR_MP_EFUSE_NONE_FILE, _T("None file define in config file!")},
+    {_ERROR_MP_EFUSE_ILLEGAL_PROGRAMMETHOD, _T("Illegal program method define in config file!")},
+    {_ERROR_MP_EFUSE_ILLEGAL_ISPOPTION, _T("Illegal isp option define in config file!")},
+
+    // For ISPTool PlugIn
+    {_ERROR_PLUGIN_ISP_OPEN_FILE_FAIL, _T("Open file fail!")},
+    {_ERROR_PLUGIN_ISP_CANCEL, _T("Isp cancel!")},
+    {_ERROR_PLUGIN_ISP_LOADANSI_FAIL, _T("Load ansi file fail!")},
+    {_ERROR_PLUGIN_ISP_FLASH_MISMATCH_USE_DEFAULT_VALUE, _T("Flash mismatch, use default value!")},
+    {_ERROR_PLUGIN_ISP_WRITE_FIRST_PAGE_ERROR, _T("Write code to first page fail!")},
+    {_ERROR_PLUGIN_ISP_FLASH_FILE_ILLEAGL, _T("FalshSet.dat illegal!")},
+    {_ERROR_PLUGIN_ISP_BANK_NO_ENOUGH, _T("The maximum index of checked bank in the UI is more than the total count of flash bank! Quit.")},
+    {_ERROR_PLUGIN_ISP_PREPARE_DATA_FAIL, _T("Prepare data fail!")},
+    {_ERROR_PLUGIN_ISP_AUTO_SEARCH_MORETHAN_ONE_FILE_MEET, _T("More than 1 file meets. Stop isp.")},
+    {_ERROR_PLUGIN_ISP_PARA_ILLEGAL, _T("Para illegal!")},
+    {_ERROR_PLUGIN_ISP_SCALER_IC_MISMATCH, _T("Scaler mismatch!")},
+    {_ERROR_PLUGIN_ISP_UNDEFINE_PNL_MODE, _T("Undefined PNL mode!")},
+    {_ERROR_PLUGIN_ISP_ILLEGAL_HP_AIO_BIG_BIN_FILE, _T("Illegal big bin file!")},
+    {_ERROR_PLUGIN_ISP_SCALER_ID_MISMATCH, _T("Scaler ID mismatch in FW flash partition!")},
+    {_ERROR_PLUGIN_ISP_PROJECT_NAME_MISMATCH, _T("Project name mismatch in FW flash partition!")},
+
+
+    //for eeprom plugIn
+    {_ERROR_PLUGIN_EDPEEPROM_SET_DEFAULT_VALUE_FAIL, _T("Set Default Value Failed!")},
+    {_ERROR_PLUGIN_EDPEEPROM_LOAD_FILE, _T("Laod File Failed!")},
+    {_ERROR_PLUGIN_EDPEEPROM_ILLEGAL_FILE, _T("File Illegal!")},
+    {_ERROR_PLUGIN_EDPEEPROM_USERSTOP, _T("User Stop!")},   
+	 
+	{_ERROR_PLUGIN_ISP_CRC_DIFFERENT_ERASE_FAIL, _T("CRC different. Erase fail!")},
+	{_ERROR_PLUGIN_ISP_CRC_DIFFERENT_ISP_FAIL, _T("CRC different. Isp fail!")},
+    {_ERROR_PLUGIN_ISP_NO_NEED_CONTINUE, _T("The bank's data is same with flash's, not need isp!")},
+    {_ERROR_PLUGIN_ISP_BANK0_NO_ENOUGH_TO_STORE_SETTING, _T("Bank0 has no enough space to store setting data!")},
+    {_ERROR_PLUGIN_ISP_SMBUS_SET_BLOCK_TYPE_FAIL, _T("Set smbus block type fail!")},
+    {_ERROR_PLUGIN_ISP_SCALER_NOT_SUPPORT, _T("Scaler is not support or detect scaler fail!")},
+    {_ERROR_PLUGIN_ISP_FAIL, _T("Isp fail!")},
+
+    //for isp edid plunin 
+    {_ERROR_PLUGIN_ISP_EDID_ENTERNISP, _T("Entern Isp mode fail!")},
+    {_ERROR_PLUGIN_ISP_EDID_OPENEDIDFILE, _T("Open EDID file fail!")},
+    {_ERROR_PLUGIN_ISP_EDID_ERRORFILELENTH, _T("File length Error!")},
+    {_ERROR_PLUGIN_ISP_EDID_OPENFLASHDAT, _T("Open falsh data file!")},
+    {_ERROR_PLUGIN_ISP_EDID_CRC_CHECK_FAIL, _T("CRC check fail!")},
+    {_ERROR_PLUGIN_ISP_EDID_FLASHSIZE_ERROR, _T("Flashsize Error!")},
+
+    // for grid
+    {_ERROR_GRID_EMPTY_VALUE, _T("Empty Value!")},
+    {_ERROR_GRID_ILLEGAL_VALUE, _T("Illegal Value!")},
+
+    // for mp ISP
+    {_ERROR_PLUGIN_MP_ISP_CONFIGFILE, _T("Config File Error!")},
+    {_ERROR_PLUGIN_MP_ISP_SCALERTYPE, _T("Scaler Type Error!")},
+    {_ERROR_PLUGIN_MP_ISP_PROGRAMMETHOD, _T("Program Methond Error!")},
+    {_ERROR_PLUGIN_MP_ISP_PROGRAMFW, _T("Program FW Error!")},
+    {_ERROR_PLUGIN_MP_ISP_PROGRAMEDID, _T("Program EDID Error!")},
+    {_ERROR_PLUGIN_MP_ISP_2NDEEPROMADDR, _T("Second Eeprom Address Error!")},
+    {_ERROR_PLUGIN_MP_ISP_PROGRAMCOUNT, _T("Program Count Error!")},
+    {_ERROR_PLUGIN_MP_ISP_1STROMSPEED, _T("First Eeprom Speed Error!")},
+    {_ERROR_PLUGIN_MP_ISP_2NDROMSPEED, _T("Second Eeprom Speed Error!")},
+    {_ERROR_PLUGIN_MP_ISP_DELAYTIME, _T("Delay Time Error!")},
+
+    {_ERROR_PLUGIN_MP_FW_VERSION_CONFIGFILE, _T("Config File Error!")},
+    {_ERROR_PLUGIN_MP_FW_VERSION_SCALERTYPE, _T("Scaler Type Error!")},
+    {_ERROR_PLUGIN_MP_FW_VERSION_PROGRAMMETHOD, _T("Program Method Error!")},
+    {_ERROR_PLUGIN_MP_FW_VERSION_DELAYTIME, _T("Delay Time Error!")},
+    {_ERROR_PLUGIN_MP_FW_VERSION_FWVERSION_FORMAT, _T("FW Version Foramt Error!")},
+    {_ERROR_PLUGIN_MP_FW_VERSION_FW_COMPARE_FAIL, _T("FW Compare Failed!")},
+    //for debugMessage
+    {_ERROR_PLUGIN_DEBUG_MESSAGE_CHECKSUM_ERROR, _T("Debug Message Checksum Error!")},
+    //for RTD Tool 
+    {_ERROR_RTDTOOL_FIND_NO_SCALER_INFO, _T("No Scaler Info!")},
+    {_ERROR_RTDTOOL_MORE_THEN_ONE_SCALER_HAVE_SAME_ID, _T("More then one scaler has same ID. Ignore it!")},
+    {_ERROR_RTDTOOL_MORE_THEN_ONE_SCALER_HAVE_SAME_NAME, _T("More then one scaler has same name. Ignore it!")},
+    {_ERROR_RTDTOOL_CAN_NOT_WRITE_TO_PROGRAM_FILES, _T("Can't write to program files!")},
+    // For flash plugin
+    {_ERROR_PLUGIN_FLASH_USER_CANCEL_READING, _T("User cancel it")},
+
+    // GT Plugin
+    {_ERROR_PLUGIN_GT_CMD_ERROR, _T("GT cmd is illegal!")},
+    {_ERROR_PLUGIN_GT_TXT_NO_CMD, _T("No cmd!")},
+    {_ERROR_PLUGIN_GT_BYTES_TO_WRITE_NO_ENOUGH, _T("Values to write is not enough!")},
+    {_ERROR_PLUGIN_GT_IGNORE_CMD, _T("Ignore this Cmd!")},
+    {_ERROR_PLUGIN_GT_READ_CMD_LOST_CHECK_VALUE, _T("Warnings: READ(addr, checkValue) lost checkValue info!")},
+
+    // Ram Plugin
+    {_ERROR_PLUGIN_RAM_ERROR_VALUE, _T("Error value")},
+    {_ERROR_PLUGIN_RAM_MODIFY_REG_FAIL, _T("Modify reg fail!")},
+    {_ERROR_PLUGIN_RAM_READ_CANCEL, _T("User cancel it")},
+
+    {_ERROR_PINSHARVERIFY_ERROR_COMPARE_VALUE, _T("Pin Value Compare fail!")},
+    {_ERROR_PINSHARVERIFY_ERROR_CREATE_REPORT_FILE, _T("Create Report File Fail!")},
+    {_ERROR_PINSHARVERIFY_ERROR_SARADC_INDEX_EMPTY, _T("ADC index empty, Select first!")},
+    {_ERROR_PINSHARVERIFY_ERROR_SARADC_CLK_DIV_ILLEGAL, _T("ADC clk Divider is illegal!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_DDC_ENOUGH_INFO, _T("Find no DDC reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_WRITE_READ_DIFFERENT,_T("Write reg fail!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_I2C_ENOUGH_INFO, _T("I2C no enough info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_ADC_ENOUGH_INFO, _T("Find no ADC info!")},
+
+    {_ERROR_PINSHARVERIFY_ERROR_NO_INTIRQ_ENOUGH_INFO, _T("Find no INT&IRQ reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_TIMER_ENOUGH_INFO, _T("Find no Timer reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_VIHVIL_ENOUGH_INFO, _T("Find no VIHVIL reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_TESTPIN_ENOUGH_INFO, _T("Find no TestPin reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_CLKO_ENOUGH_INFO, _T("Find no CLKO reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_NO_SLEWCTRL_ENOUGH_INFO, _T("Find no slew control reg info!")},
+    {_ERROR_PINSHARVERIFY_ERROR_ADC_TIME_OUT, _T("Adc conversion time out!")},
+    {_ERROR_PINSHARVERIFY_IIC_TRANSCATION_ERROR, _T("IIC transcation fail!")},
+    {_ERROR_PINSHARVERIFY_IIC_TIME_OUT, _T("IIC time out")},
+    {_ERROR_SCOPE_GET_DUTY_FAIL, _T("Scope Get Duty Fail!")},
+    {_ERROR_SCOPE_GET_FREQ_FAIL, _T("Scope Get Freq Fail!")},
+    {_ERROR_SCOPE_SET_CHANNEL_DISPLAY_FAIL, _T("Channel display fail!")},
+    {_ERROR_INSTRUMENT_INIT_SCOPE_FAIL, _T("Init scope fail!")},
+    {_ERROR_INSTRUMENT_INIT_POWERSUPPLY_FAIL, _T("Init powersupply fail!")},
+    {_ERROR_INSTRUMENT_INIT_INSTRUMENT_FAIL, _T("Init instrument fail!")},
+    {_ERROR_POWERSUPPLY_SET_VOLTAGE_FAIL, _T("Power supply set voltage fail!")},
+    {_ERROR_PLUGIN_USBPHY_TIMEOUT, _T("Polling register time out!")},
+    {_ERROR_PINSHARVERIFY_IIC_EEPROM_TEST_FAIL, _T("EEPROM test fail!")},
+    {_ERROR_SCOPE_MEAS_CLEAR_FAIL, _T("Measure clear fail!")},
+    {_ERROR_SCOPE_MEAS_FREQ_FAIL, _T("Measure frequency fail!")},
+    {_ERROR_SCOPE_MEAS_STAT_MEAN_FAIL, _T("Statics mean fail!")},
+    {_ERROR_SCOPE_GET_MEAS_RESULTS_FAIL, _T("Read results fail!")},
+    {_ERROR_SCOPE_SET_MEASURE_SOURCE_FAIL, _T("Set measure source fail!")},
+
+    {_ERROR_PLUGIN_USBMEMORY_DATA_ERROR, _T("Data Error!")},
+	
+    {_ERROR_COMM_FTDIUSB_INIT_FAIL, _T("FTDI Usb Init Fail!")},
+    {_ERROR_COMM_FTDIUSB_LOAD_DLL_FAIL, _T("Load Ftd2xx.dll Fail!")},
+    {_ERROR_COMM_FTDIUSB_LOAD_FUNC_FAIL, _T("Load Function From Dll Fail!")},
+    {_ERROR_COMM_FTDIUSB_SELECTDEVICE_FAIL, _T("Select FTDIUsb Fail!")},
+    {_ERROR_COMM_FTDIUSB_SET_MPSSE_MODE_FAIL, _T("Set MPSSE Mode Fail!")},
+    {_ERROR_COMM_FTDIUSB_CONFIG_MPSSE_FAIL, _T("Config MPSSE Mode Fail!")},
+    {_ERROR_COMM_FTDIUSB_SNED_CMD_FAIL, _T("Send FTDI USB Cmd Fail!")},
+    {_ERROR_COMM_FTDIUSB_SNED_BYTE_ERROR, _T("Send Bytes Error!")},
+    {_ERROR_COMM_FTDIUSB_ENABLE_LOOPBACK_FAIL, _T("Enable Loopback Fail!")},
+    {_ERROR_COMM_FTDIUSB_BAD_COMMAND_DETECTION_FAIL, _T("Test Bad Command Fail!")},
+    {_ERROR_COMM_FTDIUSB_INIT_MPSSE_STATE_FAIL, _T("Init MPSSE State Fail!")},
+    {_ERROR_COMM_FTDIUSB_SET_CLK_DIVISOR_ERROR, _T("Set Clk Divisor Error!")},
+    {_ERROR_COMM_FTDIUSB_INVALID_PARAMETER, _T("Invalid Parameter!")},
+    {_ERROR_COMM_FTDIUSB_WAIT_READ_QUEUE_TIMEOUT, _T("Wait Read Queue Timeout!")},
+    {_ERROR_COMM_FTDIUSB_GET_QUEUE_STATUS_FAIL, _T("Get Queue Status Fail!")},
+    {_ERROR_COMM_FTDIUSB_READ_FAIL, _T("FTDIUsb Read Fail!")},
+    {_ERROR_COMM_FTDIUSB_WRITE_FAIL, _T("FTDIUsb Write Fail!")},
+    {_ERROR_COMM_FTDIUSB_I2C_PAGELENGTH_UNSUPPORT, _T("Not support get length!")},
+    {_ERROR_COMM_FTDIUSB_SPEED_NOT_SUPPORT, _T("Speed Not Support!")},
+    {_ERROR_COMM_FTDIUSB_NOT_SUPPORT, _T("FTDI Usb Don't support this Function!")},
+
+    {_ERROR_PLUGIN_OD_OPEN_FILE_FAIL, _T("Open file fail!")},
+    {_ERROR_PLUGIN_OD_ILLEGAL_FILE, _T("OD File Illegal!!")},
+    {_ERROR_PLUGIN_OD_DATA_LEN_ERROR, _T("OD Data Length Error!!")},
+
+    {_ERROR_PLUGIN_MEASURE_MEAS_ERROR, _T("Measure error!")},
+    {_ERROR_INSTRUMENT_INIT_FAIL, _T("Instrument init fail!")},
+    {_ERROR_POWER_SUPPLY_NOT_SET_OUTPUT_ON, _T("Powersupply not set output on!")},
+    {_ERROR_POWER_SUPPLY_SET_VOLT_TIME_OUT, _T("Set voltage time out!")},
+    {_ERROR_POWER_SUPPLY_GET_PORT_SELECTION_FAIL, _T("Powersupply get port fail!")},
+    {_ERROR_POWER_SUPPLY_SET_PORT_SELECTION_FAIL, _T("Powersupply set port fail!")},
+    {_ERROR_POWER_SUPPLY_GET_OUTPUT_STATE_FAIL, _T("Powersupply get output state fail!")},
+    {_ERROR_POWER_SUPPLY_SET_OUTPUT_STATE_FAIL, _T("Powersupply set output state fail!")},
+    {_ERROR_POWER_SUPPLY_SET_VOLT_FAIL, _T("Powersupply set voltage fail!")},
+    {_ERROR_POWER_SUPPLY_GET_VOLT_FAIL, _T("Powersupply get voltage fail!")},
+    {_ERROR_POWER_SUPPLY_MEASURE_VOLT_FAIL, _T("Powersupply measure voltage fail!")},
+    {_ERROR_POWER_SUPPLY_SET_RANGE_FAIL, _T("Set power supply range fail!")},
+    {_ERROR_POWER_SUPPLY_SET_REMOTE_OR_LOCAL_FAIL, _T("Power supply set remote/local fail!")},
+    {_ERROR_POWER_SUPPLY_SET_CURRENT_FAIL, _T("Set power supply current fail!")},
+    {_ERROR_SCOPE_MEASURE_AVERAGE_VOLTAGE_FAIL, _T("Scope measure average voltage fail!")},
+    {_ERROR_SCOPE_SET_THRESHOLD_VALUE_FAIL, _T("Scope set threshold value fail!")},
+    {_ERROR_SCOPE_MEASURE_FALL_TIME_FAIL, _T("Scope measure fall time fail!")},
+    {_ERROR_SCOPE_MEASURE_RISE_TIME_FAIL, _T("Scope measure rise time fail!")},
+    {_ERROR_SCOPE_QUERY_THRESHOLDS_FAIL, _T("Scope query thresholds fail!")},
+    // Aux Sniffer
+    {_ERROR_PLUGIN_AUXSNIFFER_FILE_TYPE, _T("Open aux sniffer file fail!")},
+    {_ERROR_PLUGIN_AUXSNIFFER_USER_STOP, _T("Aux Sniffer user stop!")},
+
+    // Acer EDID
+    {_ERROR_ACEREDID_READ_EXTERNAL_FAIL, _T("Read external EDID fail!")},
+    {_ERROR_ACEREDID_READ_INTERNAL_FAIL, _T("Read internal EDID fail!")},
+    {_ERROR_ACEREDID_READ_BOTH_FAIL, _T("Read external EDID fail!  Read internal fail!")},
+
+    //plungin gamma
+    {_ERROR_PLUGIN_GAMMA_OPEN_FILE_FAIL, _T("Open Gamma File Fail!")},
+    {_ERROR_PLUGIN_GAMMA_CHECK_DATA_FAIL, _T("Check Gamma Data Fail!")},
+    {_ERROR_PLUGIN_GAMMA_SAVE_FILE_FAIL, _T("Save Gamma File Fail!")},
+
+    {_ERROR_COMM_GFXI2C_INIT_FAIL, _T("Graphics I2C Init fail!")},
+    {_ERROR_COMM_GFXI2C_PARAMETER, _T("Graphics I2C Invalid Parameter!")},
+    {_ERROR_COMM_GFXI2C_READ_FAIL, _T("Graphics I2C Read fail!")},
+    {_ERROR_COMM_GFXI2C_WRITE_FAIL, _T("Graphics I2C Write fail!")},
+    {_ERROR_COMM_GFXI2C_NOT_SUPPORT, _T("Graphics I2C Not Support!")},
+    {_ERROR_COMM_GFXI2C_I2C_PAGELENGTH, _T("Graphics I2C Pagelength UnSupport!")},
+
+    {_ERROR_SOCKET_INIT_SOCKET_FAIL, _T("Init socket fail!")},
+    {_ERROR_SOCKET_CONNECT_TO_SERVER_FAIL, _T("Connect to server fail!")},
+ 
+    {_ERROR_GPIO_I2C_WRITE_FAIL, _T("GPIO Simulate I2C Write fail!")},
+    {_ERROR_GPIO_I2C_READ_FAIL, _T("GPIO Simulate I2C Read fail!")},
+    {_ERROR_DDCCI_ACCESS_TIME_OUT, _T("DDCCI Access Timeout!")},
+    {_ERROR_DDCCI_CHECK_DATA_FAIL, _T("DDCCI Check Data Fail!")},
+    {_ERROR_DATA_OUT_OF_SECTOR, _T("Data Length Out of Sector!")},
+
+    {_ERROR_HDCP_DEBUG_MODE_ERROR, _T("HDCP Debug Mode Error!")},
+    {_ERROR_HDCP_DATA_CHECK_ERROR, _T("HDCP Data Check ERROR!")},
+   
+    {_ERROR_END, _T("No information of this error!")}
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+CONST LPCTSTR STRING_EDPTOOL_SECTION = _T("EDPTool");
+CONST LPCTSTR STRING_EDPTOOL_KEY_MCURESETDELAYTIME = _T("McuResetDelayTimes");
+CONST LPCTSTR STRING_EDPTOOL_KEY_RL6342MCURESETDELAYTIME = _T("RL6342McuResetDelayTimes");
+
+typedef enum
+{
+    _ENUM_EXE_EDP_TOOL = 0,
+    _ENUM_EXE_MP_TOOL
+}STRUCT_ENUM_EXE_OPTION;
+
+
+//////////////////////////////////////////////////////////////////////////
+
+typedef struct STRUCT_REGISTER_ADDRESS
+{
+    STRUCT_ENUM_REG_TYPE enumRegType;
+    WORD usRegAddr;
+    WORD usPortAddr;
+    union
+    {
+        WORD usOSDAddress;
+        WORD usUSBAddress;
+        WORD usDPCDAddress;
+    };  
+
+    STRUCT_REGISTER_ADDRESS()
+    {
+        enumRegType = _ENUM_REG_UNKNOWN;
+        usRegAddr = 0;
+        usPortAddr = 0;
+        usOSDAddress = 0;
+    }
+
+    STRUCT_REGISTER_ADDRESS& operator = (const STRUCT_REGISTER_ADDRESS& stRegAddress)
+    {
+        enumRegType = stRegAddress.enumRegType;
+        usRegAddr = stRegAddress.usRegAddr;
+        usPortAddr = stRegAddress.usPortAddr;
+        if(enumRegType == _ENUM_REG_PORT_PAGE_OSD)
+        {
+            usOSDAddress = stRegAddress.usOSDAddress;
+        }
+        else if(enumRegType == _ENUM_REG_PORT_PAGE_USB)
+        {
+            usUSBAddress = stRegAddress.usUSBAddress;
+        }
+        else if(enumRegType == _ENUM_REG_PORT_PAGE_DPCD)
+        {
+            usDPCDAddress = stRegAddress.usDPCDAddress;
+        }
+    }
+}STRUCT_REGISTER_ADDRESS;
+#endif
+#endif // End of #ifndef _COMMON_H_
+

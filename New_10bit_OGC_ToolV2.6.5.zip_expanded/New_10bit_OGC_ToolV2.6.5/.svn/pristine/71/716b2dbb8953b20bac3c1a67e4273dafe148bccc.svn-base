@@ -1,0 +1,1398 @@
+#include <vcl.h>
+
+#include "OGCOCC_Export.h"
+
+float JND1024[1024] = {
+0,
+0.049982f,
+0.054679f,
+0.059375f,
+0.064338f,
+0.069553f,
+0.075006f,
+0.080687f,
+0.086592f,
+0.092718f,
+0.099066f,
+0.10564f,
+0.11243f,
+0.11945f,
+0.12669f,
+0.13417f,
+0.14187f,
+0.14981f,
+0.15798f,
+0.16639f,
+0.17504f,
+0.18394f,
+0.19307f,
+0.20246f,
+0.21209f,
+0.22197f,
+0.23211f,
+0.2425f,
+0.25315f,
+0.26406f,
+0.27524f,
+0.28668f,
+0.29838f,
+0.31036f,
+0.3226f,
+0.33512f,
+0.34792f,
+0.361f,
+0.37435f,
+0.38799f,
+0.40192f,
+0.41613f,
+0.43063f,
+0.44543f,
+0.46052f,
+0.47591f,
+0.49159f,
+0.50758f,
+0.52388f,
+0.54047f,
+0.55738f,
+0.5746f,
+0.59213f,
+0.60998f,
+0.62815f,
+0.64663f,
+0.66544f,
+0.68458f,
+0.70404f,
+0.72383f,
+0.74396f,
+0.76442f,
+0.78521f,
+0.80635f,
+0.82783f,
+0.84966f,
+0.87183f,
+0.89435f,
+0.91722f,
+0.94045f,
+0.96404f,
+0.98799f,
+1.0123f,
+1.037f,
+1.062f,
+1.0874f,
+1.1132f,
+1.1394f,
+1.1659f,
+1.1928f,
+1.2201f,
+1.2478f,
+1.2759f,
+1.3044f,
+1.3332f,
+1.3625f,
+1.3921f,
+1.4222f,
+1.4527f,
+1.4835f,
+1.5148f,
+1.5465f,
+1.5786f,
+1.6111f,
+1.6441f,
+1.6775f,
+1.7113f,
+1.7455f,
+1.7802f,
+1.8153f,
+1.8508f,
+1.8868f,
+1.9233f,
+1.9601f,
+1.9975f,
+2.0352f,
+2.0735f,
+2.1122f,
+2.1514f,
+2.191f,
+2.2311f,
+2.2717f,
+2.3127f,
+2.3542f,
+2.3963f,
+2.4388f,
+2.4817f,
+2.5252f,
+2.5692f,
+2.6137f,
+2.6586f,
+2.7041f,
+2.7501f,
+2.7966f,
+2.8436f,
+2.8912f,
+2.9392f,
+2.9878f,
+3.0369f,
+3.0866f,
+3.1367f,
+3.1875f,
+3.2387f,
+3.2905f,
+3.3429f,
+3.3958f,
+3.4493f,
+3.5033f,
+3.5579f,
+3.6131f,
+3.6688f,
+3.7251f,
+3.782f,
+3.8395f,
+3.8976f,
+3.9563f,
+4.0155f,
+4.0754f,
+4.1358f,
+4.1969f,
+4.2586f,
+4.3209f,
+4.3838f,
+4.4473f,
+4.5115f,
+4.5763f,
+4.6417f,
+4.7078f,
+4.7745f,
+4.8419f,
+4.9099f,
+4.9785f,
+5.0479f,
+5.1179f,
+5.1885f,
+5.2599f,
+5.3319f,
+5.4046f,
+5.478f,
+5.5521f,
+5.6269f,
+5.7024f,
+5.7785f,
+5.8554f,
+5.9331f,
+6.0114f,
+6.0904f,
+6.1702f,
+6.2508f,
+6.332f,
+6.414f,
+6.4968f,
+6.5803f,
+6.6645f,
+6.7496f,
+6.8353f,
+6.9219f,
+7.0093f,
+7.0974f,
+7.1863f,
+7.276f,
+7.3665f,
+7.4578f,
+7.5499f,
+7.6429f,
+7.7366f,
+7.8312f,
+7.9266f,
+8.0228f,
+8.1199f,
+8.2179f,
+8.3166f,
+8.4163f,
+8.5168f,
+8.6181f,
+8.7204f,
+8.8235f,
+8.9275f,
+9.0324f,
+9.1382f,
+9.2449f,
+9.3525f,
+9.461f,
+9.5705f,
+9.6809f,
+9.7922f,
+9.9044f,
+10.018f,
+10.132f,
+10.247f,
+10.363f,
+10.48f,
+10.598f,
+10.717f,
+10.837f,
+10.958f,
+11.08f,
+11.203f,
+11.327f,
+11.452f,
+11.578f,
+11.705f,
+11.833f,
+11.962f,
+12.092f,
+12.224f,
+12.356f,
+12.489f,
+12.624f,
+12.76f,
+12.896f,
+13.034f,
+13.173f,
+13.313f,
+13.454f,
+13.596f,
+13.74f,
+13.884f,
+14.03f,
+14.177f,
+14.325f,
+14.474f,
+14.625f,
+14.776f,
+14.929f,
+15.083f,
+15.238f,
+15.395f,
+15.552f,
+15.711f,
+15.872f,
+16.033f,
+16.196f,
+16.36f,
+16.525f,
+16.691f,
+16.859f,
+17.028f,
+17.199f,
+17.37f,
+17.544f,
+17.718f,
+17.894f,
+18.071f,
+18.249f,
+18.429f,
+18.61f,
+18.793f,
+18.977f,
+19.163f,
+19.349f,
+19.538f,
+19.727f,
+19.919f,
+20.111f,
+20.305f,
+20.501f,
+20.698f,
+20.896f,
+21.096f,
+21.298f,
+21.501f,
+21.706f,
+21.912f,
+22.12f,
+22.329f,
+22.54f,
+22.752f,
+22.966f,
+23.182f,
+23.399f,
+23.618f,
+23.838f,
+24.06f,
+24.284f,
+24.51f,
+24.737f,
+24.965f,
+25.196f,
+25.428f,
+25.662f,
+25.898f,
+26.135f,
+26.374f,
+26.615f,
+26.858f,
+27.102f,
+27.349f,
+27.597f,
+27.847f,
+28.098f,
+28.352f,
+28.607f,
+28.865f,
+29.124f,
+29.385f,
+29.648f,
+29.913f,
+30.18f,
+30.448f,
+30.719f,
+30.992f,
+31.267f,
+31.543f,
+31.822f,
+32.103f,
+32.385f,
+32.67f,
+32.957f,
+33.246f,
+33.537f,
+33.83f,
+34.125f,
+34.422f,
+34.722f,
+35.023f,
+35.327f,
+35.633f,
+35.941f,
+36.251f,
+36.564f,
+36.879f,
+37.196f,
+37.515f,
+37.837f,
+38.161f,
+38.487f,
+38.815f,
+39.146f,
+39.479f,
+39.815f,
+40.153f,
+40.493f,
+40.836f,
+41.181f,
+41.529f,
+41.879f,
+42.231f,
+42.586f,
+42.944f,
+43.304f,
+43.667f,
+44.032f,
+44.4f,
+44.77f,
+45.143f,
+45.518f,
+45.897f,
+46.278f,
+46.661f,
+47.047f,
+47.436f,
+47.828f,
+48.222f,
+48.619f,
+49.019f,
+49.422f,
+49.828f,
+50.236f,
+50.647f,
+51.061f,
+51.478f,
+51.898f,
+52.321f,
+52.747f,
+53.175f,
+53.607f,
+54.042f,
+54.479f,
+54.92f,
+55.364f,
+55.811f,
+56.261f,
+56.714f,
+57.17f,
+57.629f,
+58.092f,
+58.558f,
+59.027f,
+59.499f,
+59.974f,
+60.453f,
+60.935f,
+61.42f,
+61.909f,
+62.401f,
+62.897f,
+63.395f,
+63.898f,
+64.403f,
+64.913f,
+65.425f,
+65.941f,
+66.461f,
+66.984f,
+67.511f,
+68.042f,
+68.576f,
+69.114f,
+69.655f,
+70.2f,
+70.749f,
+71.302f,
+71.858f,
+72.418f,
+72.982f,
+73.55f,
+74.122f,
+74.697f,
+75.277f,
+75.86f,
+76.448f,
+77.039f,
+77.635f,
+78.234f,
+78.838f,
+79.445f,
+80.057f,
+80.673f,
+81.293f,
+81.917f,
+82.546f,
+83.179f,
+83.816f,
+84.457f,
+85.103f,
+85.753f,
+86.407f,
+87.066f,
+87.73f,
+88.397f,
+89.07f,
+89.747f,
+90.428f,
+91.114f,
+91.805f,
+92.5f,
+93.2f,
+93.905f,
+94.614f,
+95.328f,
+96.047f,
+96.771f,
+97.5f,
+98.233f,
+98.972f,
+99.715f,
+100.46f,
+101.22f,
+101.98f,
+102.74f,
+103.51f,
+104.28f,
+105.06f,
+105.85f,
+106.64f,
+107.43f,
+108.23f,
+109.04f,
+109.85f,
+110.66f,
+111.48f,
+112.31f,
+113.14f,
+113.98f,
+114.83f,
+115.68f,
+116.53f,
+117.39f,
+118.26f,
+119.13f,
+120.01f,
+120.89f,
+121.78f,
+122.68f,
+123.58f,
+124.49f,
+125.4f,
+126.32f,
+127.25f,
+128.18f,
+129.12f,
+130.07f,
+131.02f,
+131.97f,
+132.94f,
+133.91f,
+134.88f,
+135.87f,
+136.86f,
+137.85f,
+138.85f,
+139.86f,
+140.88f,
+141.9f,
+142.93f,
+143.97f,
+145.01f,
+146.06f,
+147.12f,
+148.18f,
+149.25f,
+150.33f,
+151.42f,
+152.51f,
+153.61f,
+154.72f,
+155.83f,
+156.95f,
+158.08f,
+159.22f,
+160.36f,
+161.51f,
+162.67f,
+163.84f,
+165.01f,
+166.19f,
+167.38f,
+168.58f,
+169.79f,
+171,
+172.22f,
+173.45f,
+174.69f,
+175.93f,
+177.19f,
+178.45f,
+179.72f,
+181,
+182.29f,
+183.58f,
+184.89f,
+186.2f,
+187.52f,
+188.85f,
+190.19f,
+191.54f,
+192.89f,
+194.26f,
+195.63f,
+197.02f,
+198.41f,
+199.81f,
+201.22f,
+202.64f,
+204.07f,
+205.51f,
+206.96f,
+208.42f,
+209.88f,
+211.36f,
+212.85f,
+214.34f,
+215.85f,
+217.36f,
+218.89f,
+220.43f,
+221.97f,
+223.53f,
+225.09f,
+226.67f,
+228.26f,
+229.85f,
+231.46f,
+233.08f,
+234.71f,
+236.35f,
+238,
+239.66f,
+241.33f,
+243.01f,
+244.7f,
+246.41f,
+248.12f,
+249.85f,
+251.59f,
+253.34f,
+255.1f,
+256.87f,
+258.65f,
+260.45f,
+262.26f,
+264.07f,
+265.91f,
+267.75f,
+269.6f,
+271.47f,
+273.35f,
+275.24f,
+277.14f,
+279.06f,
+280.99f,
+282.93f,
+284.88f,
+286.85f,
+288.83f,
+290.82f,
+292.82f,
+294.84f,
+296.87f,
+298.92f,
+300.97f,
+303.05f,
+305.13f,
+307.23f,
+309.34f,
+311.46f,
+313.6f,
+315.76f,
+317.92f,
+320.1f,
+322.3f,
+324.51f,
+326.73f,
+328.97f,
+331.22f,
+333.49f,
+335.77f,
+338.07f,
+340.38f,
+342.71f,
+345.05f,
+347.41f,
+349.78f,
+352.17f,
+354.57f,
+356.99f,
+359.43f,
+361.88f,
+364.34f,
+366.83f,
+369.33f,
+371.84f,
+374.37f,
+376.92f,
+379.48f,
+382.06f,
+384.66f,
+387.28f,
+389.91f,
+392.55f,
+395.22f,
+397.9f,
+400.6f,
+403.32f,
+406.06f,
+408.81f,
+411.58f,
+414.37f,
+417.17f,
+420,
+422.84f,
+425.7f,
+428.58f,
+431.48f,
+434.4f,
+437.34f,
+440.29f,
+443.27f,
+446.26f,
+449.27f,
+452.31f,
+455.36f,
+458.43f,
+461.52f,
+464.64f,
+467.77f,
+470.92f,
+474.09f,
+477.29f,
+480.5f,
+483.73f,
+486.99f,
+490.27f,
+493.57f,
+496.88f,
+500.23f,
+503.59f,
+506.97f,
+510.38f,
+513.81f,
+517.26f,
+520.73f,
+524.22f,
+527.74f,
+531.28f,
+534.84f,
+538.43f,
+542.04f,
+545.67f,
+549.33f,
+553.01f,
+556.71f,
+560.44f,
+564.19f,
+567.97f,
+571.77f,
+575.59f,
+579.44f,
+583.32f,
+587.22f,
+591.14f,
+595.09f,
+599.07f,
+603.07f,
+607.1f,
+611.15f,
+615.23f,
+619.33f,
+623.47f,
+627.63f,
+631.81f,
+636.02f,
+640.26f,
+644.53f,
+648.83f,
+653.15f,
+657.5f,
+661.88f,
+666.29f,
+670.72f,
+675.19f,
+679.68f,
+684.2f,
+688.75f,
+693.33f,
+697.94f,
+702.58f,
+707.25f,
+711.95f,
+716.68f,
+721.44f,
+726.24f,
+731.06f,
+735.91f,
+740.8f,
+745.71f,
+750.66f,
+755.64f,
+760.66f,
+765.7f,
+770.78f,
+775.89f,
+781.03f,
+786.21f,
+791.42f,
+796.66f,
+801.94f,
+807.25f,
+812.6f,
+817.98f,
+823.39f,
+828.84f,
+834.33f,
+839.85f,
+845.4f,
+851,
+856.63f,
+862.29f,
+867.99f,
+873.73f,
+879.5f,
+885.32f,
+891.17f,
+897.05f,
+902.98f,
+908.94f,
+914.95f,
+920.99f,
+927.07f,
+933.19f,
+939.35f,
+945.55f,
+951.78f,
+958.06f,
+964.38f,
+970.74f,
+977.14f,
+983.59f,
+990.07f,
+996.6f,
+1003.2f,
+1009.8f,
+1016.4f,
+1023.1f,
+1029.9f,
+1036.7f,
+1043.5f,
+1050.3f,
+1057.3f,
+1064.2f,
+1071.2f,
+1078.3f,
+1085.4f,
+1092.5f,
+1099.7f,
+1106.9f,
+1114.2f,
+1121.6f,
+1128.9f,
+1136.3f,
+1143.8f,
+1151.3f,
+1158.9f,
+1166.5f,
+1174.2f,
+1181.9f,
+1189.7f,
+1197.5f,
+1205.4f,
+1213.3f,
+1221.2f,
+1229.3f,
+1237.3f,
+1245.5f,
+1253.6f,
+1261.9f,
+1270.1f,
+1278.5f,
+1286.9f,
+1295.3f,
+1303.8f,
+1312.4f,
+1321,
+1329.6f,
+1338.4f,
+1347.1f,
+1356,
+1364.9f,
+1373.8f,
+1382.8f,
+1391.9f,
+1401,
+1410.2f,
+1419.4f,
+1428.7f,
+1438.1f,
+1447.5f,
+1457,
+1466.5f,
+1476.1f,
+1485.8f,
+1495.5f,
+1505.3f,
+1515.2f,
+1525.1f,
+1535.1f,
+1545.1f,
+1555.2f,
+1565.4f,
+1575.7f,
+1586,
+1596.4f,
+1606.8f,
+1617.3f,
+1627.9f,
+1638.5f,
+1649.3f,
+1660.1f,
+1670.9f,
+1681.8f,
+1692.8f,
+1703.9f,
+1715,
+1726.3f,
+1737.5f,
+1748.9f,
+1760.3f,
+1771.8f,
+1783.4f,
+1795.1f,
+1806.8f,
+1818.6f,
+1830.5f,
+1842.5f,
+1854.5f,
+1866.6f,
+1878.8f,
+1891.1f,
+1903.4f,
+1915.9f,
+1928.4f,
+1941,
+1953.7f,
+1966.4f,
+1979.3f,
+1992.2f,
+2005.2f,
+2018.3f,
+2031.5f,
+2044.7f,
+2058.1f,
+2071.5f,
+2085,
+2098.6f,
+2112.3f,
+2126.1f,
+2140,
+2154,
+2168,
+2182.2f,
+2196.4f,
+2210.8f,
+2225.2f,
+2239.7f,
+2254.3f,
+2269,
+2283.8f,
+2298.7f,
+2313.7f,
+2328.8f,
+2344,
+2359.3f,
+2374.7f,
+2390.2f,
+2405.8f,
+2421.5f,
+2437.2f,
+2453.1f,
+2469.1f,
+2485.2f,
+2501.5f,
+2517.8f,
+2534.2f,
+2550.7f,
+2567.3f,
+2584.1f,
+2600.9f,
+2617.9f,
+2635,
+2652.1f,
+2669.4f,
+2686.8f,
+2704.3f,
+2722,
+2739.7f,
+2757.6f,
+2775.6f,
+2793.6f,
+2811.9f,
+2830.2f,
+2848.6f,
+2867.2f,
+2885.9f,
+2904.7f,
+2923.6f,
+2942.7f,
+2961.9f,
+2981.2f,
+3000.6f,
+3020.2f,
+3039.8f,
+3059.7f,
+3079.6f,
+3099.7f,
+3119.9f,
+3140.2f,
+3160.7f,
+3181.3f,
+3202,
+3222.9f,
+3243.9f,
+3265,
+3286.3f,
+3307.7f,
+3329.3f,
+3351,
+3372.8f,
+3394.8f,
+3416.9f,
+3439.2f,
+3461.6f,
+3484.1f,
+3506.8f,
+3529.7f,
+3552.7f,
+3575.8f,
+3599.1f,
+3622.6f,
+3646.2f,
+3670,
+3693.9f,
+3717.9f,
+3742.2f,
+3766.6f,
+3791.1f,
+3815.8f,
+3840.7f,
+3865.7f,
+3890.9f,
+3916.3f,
+3941.8f,
+3967.5f,
+3993.3f,
+};
+
+func_rtdGammaSetGrayPattern g_rtdGammaSetGrayPattern = NULL;
+func_rtdGammaGetGrayPatternNum    g_rtdGammaGetGrayPatternNum = NULL;
+func_rtdGammaGetGrayPattern    g_rtdGammaGetGrayPattern = NULL;
+func_rtdGammaSetGammaNum    g_rtdGammaSetGammaNum = NULL;
+func_rtdGammaGetGammaNum    g_rtdGammaGetGammaNum = NULL;
+func_rtdGammaSetGammaIndex    g_rtdGammaSetGammaIndex = NULL;
+func_rtdGammaGetGammaIndex    g_rtdGammaGetGammaIndex = NULL;
+func_rtdGammaSetCTNum    g_rtdGammaSetCTNum = NULL;
+func_rtdGammaGetCTNum   g_rtdGammaGetCTNum = NULL;
+func_rtdGammaSetTxy   g_rtdGammaSetTxy = NULL;
+func_rtdGammaGetTxy   g_rtdGammaGetTxy = NULL;
+//func_rtdGammaSetInputBitNum   g_rtdGammaSetInputBitNum = NULL;
+//func_rtdGammaGetInputBitNum  g_rtdGammaGetInputBitNum = NULL;
+func_rtdGammaSetPanelBitNum    g_rtdGammaSetPanelBitNum = NULL;
+func_rtdGammaGetPanelBitNum    g_rtdGammaGetPanelBitNum = NULL;
+func_rtdGammaSetEOTF g_rtdGammaSetEOTF = NULL;
+func_rtdGammaGetEOTF g_rtdGammaGetEOTF = NULL;
+func_rtdGammaGetOCCLockCT g_rtdGammaGetOCCLockCT = NULL;
+func_rtdGammaSetOCCLockCT g_rtdGammaSetOCCLockCT = NULL;
+
+func_rtdGammaSetNoInterpolationMode g_rtdGammaSetNoInterpolationMode = NULL;
+func_rtdGammaGetNoInterpolationMode g_rtdGammaGetNoInterpolationMode = NULL;
+
+func_rtdGammaSetLockEnd g_rtdGammaSetLockEnd = NULL;
+func_rtdGammaSetLUTCompensate g_rtdGammaSetLUTCompensate = NULL;
+func_rtdGammaSetFreesyncIIEDIDLv g_rtdGammaSetFreesyncIIEDIDLv = NULL;
+func_rtdGammaSetMinLv g_rtdGammaSetMinLv = NULL;
+func_rtdDICOMSetDICOMMode g_rtdDICOMSetDICOMMode = NULL; // Hung
+func_rtdDICOMSetDICOMxy g_rtdDICOMSetDICOMxy = NULL; // Hung
+func_rtdDICOMSetDICOMLimitLv g_rtdDICOMSetDICOMLimitLv = NULL; // Hung
+func_rtdDICOMSetDICOMAL g_rtdDICOMSetDICOMAL = NULL; // Hung
+func_rtdDICOMGetDICOMAL g_rtdDICOMGetDICOMAL = NULL;
+func_rtdDICOMGetDICOMRef g_rtdDICOMGetDICOMRef = NULL; // Hung
+func_rtdDICOMGetMinJND g_rtdDICOMGetMinJND = NULL;
+func_rtdDICOMGetMaxJND g_rtdDICOMGetMaxJND = NULL;
+func_rtdDICOMGetJNDStep g_rtdDICOMGetJNDStep = NULL;
+func_rtdGammaPatternWhite g_rtdGammaPatternWhite = NULL;
+func_rtdGammaPatternRGB g_rtdGammaPatternRGB = NULL;
+
+func_rtdGammaPatternRGBScale g_rtdGammaPatternRGBScale = NULL;
+func_rtdGammaGetInputGammaToneMappingLUT g_rtdGammaGetInputGammaToneMappingLUT = NULL;
+func_rtdGammaGetMaxPanelLvPQ g_rtdGammaGetMaxPanelLvPQ = NULL;
+func_rtdGammaGetNoToneMappingBound g_rtdGammaGetNoToneMappingBound = NULL;
+func_rtdGammaGetMaxPanelLvEDIDCV g_rtdGammaGetMaxPanelLvEDIDCV = NULL;
+func_rtdGammaGetHDRInitial g_rtdGammaGetHDRInitial = NULL;
+func_rtdGammaGetLocalDimmingIGLUT g_rtdGammaGetLocalDimmingIGLUT = NULL;
+func_rtdGammaGetFreesync2IGLUT g_rtdGammaGetFreesync2IGLUT = NULL;
+func_rtdGammaPatternGray g_rtdGammaPatternGray = NULL;
+func_rtdGammaGetWhiteLv g_rtdGammaGetWhiteLv = NULL;
+func_rtdGammaGetWhiteX g_rtdGammaGetWhiteX = NULL;
+func_rtdGammaGetWhiteY g_rtdGammaGetWhiteY = NULL;
+func_rtdGammaClearPara g_rtdGammaClearPara = NULL;
+func_rtdGammaSetIDNum g_rtdGammaSetIDNum = NULL;
+func_rtdGammaCalculateTotalCheckSum g_rtdGammaCalculateTotalCheckSum = NULL;
+func_rtdGammaGetOGCLUT g_rtdGammaGetOGCLUT = NULL;
+func_rtdGammaGetDICOMLUT g_rtdGammaGetDICOMLUT = NULL;
+func_rtdGammaGetOCCLUT g_rtdGammaGetOCCLUT = NULL;
+func_rtdGammaGetPanelNativeError g_rtdGammaGetPanelNativeError = NULL;
+func_rtdGammaGetFixedMeasureData g_rtdGammaGetFixedMeasureData = NULL;
+func_rtdGammaSet1To7PatternGray g_rtdGammaSet1To7PatternGray = NULL;
+func_rtdGammaSetLUTDecayMode g_rtdGammaSetLUTDecayMode = NULL;
+func_rtdColormapClearPara g_rtdColormapClearPara = NULL;
+func_rtdColormapGetCofficient g_rtdColormapGetCofficient = NULL;
+func_rtdColormapGetPanelMatrix g_rtdColormapGetPanelMatrix = NULL;
+func_rtdColormapGetLUTCofficient g_rtdColormapGetLUTCofficient = NULL;
+func_rtdColormapGetColorSpace g_rtdColormapGetColorSpace = NULL;
+func_rtdColormapSetColorSpace g_rtdColormapSetColorSpace = NULL;
+func_rtdColormapSetUserColorSpace g_rtdColormapSetUserColorSpace = NULL;
+func_rtdColormapSetUserDefineGamut g_rtdColormapSetUserDefineGamut = NULL;
+func_rtdColormapGetUserDefineGamut g_rtdColormapGetUserDefineGamut = NULL;
+func_rtdColormapSetPanelOrgGamut g_rtdColormapSetPanelOrgGamut = NULL;
+func_rtdColormapGetPanelOrgGamut g_rtdColormapGetPanelOrgGamut = NULL;
+func_rtdColormapSetBatchLvxy g_rtdColormapSetBatchLvxy = NULL;
+func_rtdColormapGetColorMatrix g_rtdColormapGetColorMatrix = NULL;
+func_rtdColormapGetHDRColorMatrix g_rtdColormapGetHDRColorMatrix = NULL;
+func_rtdColormapGetHDRTargetXYZ g_rtdColormapGetHDRTargetXYZ = NULL;
+func_rtdColormapSaveMatrix g_rtdColormapSaveMatrix = NULL;
+func_rtdColormapSetSoftProofMatrix g_rtdColormapSetSoftProofMatrix = NULL;
+func_rtdColormapSetBlueCompensate g_rtdColormapSetBlueCompensate = NULL;
+func_rtdColormapSetHDRsRGBpanel g_rtdColormapSetHDRsRGBpanel = NULL;
+func_rtdColormapSetWhiteLvxy g_rtdColormapSetWhiteLvxy = NULL;
+func_rtdsRGBColorClearPara g_rtdsRGBColorClearPara = NULL;
+func_rtdsRGBColorSetInput g_rtdsRGBColorSetInput = NULL;
+func_rtdsRGBColorGetOutput g_rtdsRGBColorGetOutput = NULL;
+func_rtdsRGBColorSetWhiteLv g_rtdsRGBColorSetWhiteLv = NULL;
+func_rtdsRGBColorgetValues g_rtdsRGBColorgetValues = NULL;
+
+HINSTANCE InitOGCOCCDLL(LPCTSTR szDLLName)
+{
+	HINSTANCE hInst = LoadLibrary(szDLLName);
+
+    if (hInst == NULL)
+    {
+        return NULL;
+    }
+
+	g_rtdGammaSetGrayPattern = NULL;
+    g_rtdGammaGetGrayPatternNum = NULL;
+    g_rtdGammaGetGrayPattern = NULL;
+    g_rtdGammaSetGammaNum = NULL;
+    g_rtdGammaGetGammaNum = NULL;
+    g_rtdGammaSetGammaIndex = NULL;
+    g_rtdGammaGetGammaIndex = NULL;
+    g_rtdGammaSetCTNum = NULL;
+    g_rtdGammaGetCTNum = NULL;
+    g_rtdGammaSetTxy = NULL;
+    g_rtdGammaGetTxy = NULL;
+    //g_rtdGammaSetInputBitNum = NULL;
+    //g_rtdGammaGetInputBitNum = NULL;
+    g_rtdGammaSetPanelBitNum = NULL;
+    g_rtdGammaGetPanelBitNum = NULL;
+	g_rtdGammaSetEOTF = NULL;
+	g_rtdGammaGetEOTF = NULL;
+    g_rtdGammaSetOCCLockCT = NULL;
+    g_rtdGammaGetOCCLockCT = NULL;
+	g_rtdGammaSetNoInterpolationMode = NULL;
+	g_rtdGammaGetNoInterpolationMode = NULL;
+    g_rtdGammaSetLockEnd = NULL;
+    g_rtdGammaSetLUTCompensate = NULL;
+	g_rtdGammaSetFreesyncIIEDIDLv = NULL;
+	g_rtdGammaSetMinLv = NULL;
+    g_rtdGammaClearPara = NULL;
+    g_rtdGammaSetIDNum = NULL;
+    g_rtdDICOMSetDICOMMode = NULL;
+    g_rtdDICOMSetDICOMxy = NULL;
+	g_rtdDICOMSetDICOMLimitLv = NULL;
+	g_rtdDICOMSetDICOMAL = NULL;
+	g_rtdDICOMGetDICOMAL = NULL;
+	g_rtdDICOMGetDICOMRef = NULL;
+    g_rtdDICOMGetMinJND = NULL;
+    g_rtdDICOMGetMaxJND = NULL;
+    g_rtdDICOMGetJNDStep = NULL;
+    g_rtdGammaPatternWhite = NULL;
+    g_rtdGammaPatternRGB = NULL;
+    g_rtdGammaPatternRGBScale = NULL;
+    g_rtdGammaGetInputGammaToneMappingLUT = NULL;
+	g_rtdGammaGetMaxPanelLvPQ = NULL;
+	g_rtdGammaGetNoToneMappingBound = NULL;
+	g_rtdGammaGetMaxPanelLvEDIDCV = NULL;
+	g_rtdGammaGetHDRInitial = NULL;
+    g_rtdGammaGetLocalDimmingIGLUT = NULL;
+	g_rtdGammaGetFreesync2IGLUT = NULL;
+    g_rtdGammaPatternGray = NULL;
+    g_rtdGammaGetWhiteLv = NULL;
+    g_rtdGammaGetWhiteX = NULL;
+    g_rtdGammaGetWhiteY = NULL;
+    g_rtdGammaCalculateTotalCheckSum = NULL;
+    g_rtdGammaGetOGCLUT = NULL;
+    g_rtdGammaGetDICOMLUT = NULL;
+    g_rtdGammaGetOCCLUT = NULL;
+    g_rtdGammaGetPanelNativeError = NULL;
+    g_rtdGammaGetFixedMeasureData = NULL;
+	g_rtdGammaSet1To7PatternGray = NULL;
+    g_rtdGammaSetLUTDecayMode = NULL;
+    g_rtdColormapClearPara = NULL;
+    g_rtdColormapGetCofficient = NULL;
+	g_rtdColormapGetPanelMatrix= NULL;
+    g_rtdColormapGetLUTCofficient = NULL;
+    g_rtdColormapGetColorSpace = NULL;
+    g_rtdColormapSetColorSpace = NULL;
+    g_rtdColormapSetUserColorSpace = NULL;
+    g_rtdColormapSetUserDefineGamut  = NULL;
+    g_rtdColormapGetUserDefineGamut  = NULL;
+    g_rtdColormapSetPanelOrgGamut  = NULL;
+    g_rtdColormapGetPanelOrgGamut  = NULL;
+    g_rtdColormapSetBatchLvxy = NULL;
+    g_rtdColormapGetColorMatrix = NULL;
+    g_rtdColormapGetHDRColorMatrix = NULL;
+	g_rtdColormapGetHDRTargetXYZ = NULL;
+    g_rtdColormapSaveMatrix = NULL;
+    g_rtdColormapSetSoftProofMatrix = NULL;
+    g_rtdColormapSetBlueCompensate = NULL;
+	g_rtdColormapSetHDRsRGBpanel = NULL;
+    g_rtdColormapSetWhiteLvxy = NULL;
+    g_rtdsRGBColorClearPara = NULL;
+    g_rtdsRGBColorSetInput = NULL;
+    g_rtdsRGBColorGetOutput = NULL;
+    g_rtdsRGBColorSetWhiteLv = NULL;
+    g_rtdsRGBColorgetValues = NULL;
+
+	g_rtdGammaSetGrayPattern = (func_rtdGammaSetGrayPattern)GetProcAddress(hInst, "rtdGammaSetGrayPattern");
+    g_rtdGammaGetGrayPatternNum = (func_rtdGammaGetGrayPatternNum)GetProcAddress(hInst, "rtdGammaGetGrayPatternNum");
+    g_rtdGammaGetGrayPattern = (func_rtdGammaGetGrayPattern)GetProcAddress(hInst, "rtdGammaGetGrayPattern");
+    g_rtdGammaSetGammaNum = (func_rtdGammaSetGammaNum)GetProcAddress(hInst, "rtdGammaSetGammaNum");
+    g_rtdGammaGetGammaNum = (func_rtdGammaGetGammaNum)GetProcAddress(hInst, "rtdGammaGetGammaNum");
+    g_rtdGammaSetGammaIndex = (func_rtdGammaSetGammaIndex)GetProcAddress(hInst, "rtdGammaSetGammaIndex");
+    g_rtdGammaGetGammaIndex = (func_rtdGammaGetGammaIndex)GetProcAddress(hInst, "rtdGammaGetGammaIndex");
+    g_rtdGammaSetCTNum = (func_rtdGammaSetCTNum)GetProcAddress(hInst, "rtdGammaSetCTNum");
+    g_rtdGammaGetCTNum = (func_rtdGammaGetCTNum)GetProcAddress(hInst, "rtdGammaGetCTNum");
+    g_rtdGammaSetTxy = (func_rtdGammaSetTxy)GetProcAddress(hInst, "rtdGammaSetTxy");
+    g_rtdGammaGetTxy = (func_rtdGammaGetTxy)GetProcAddress(hInst, "rtdGammaGetTxy");
+    //g_rtdGammaSetInputBitNum = (func_rtdGammaSetInputBitNum)GetProcAddress(hInst, "rtdGammaSetInputBitNum");
+    //g_rtdGammaGetInputBitNum = (func_rtdGammaGetInputBitNum)GetProcAddress(hInst, "rtdGammaGetInputBitNum");
+    g_rtdGammaSetPanelBitNum = (func_rtdGammaSetPanelBitNum)GetProcAddress(hInst, "rtdGammaSetPanelBitNum");
+    g_rtdGammaGetPanelBitNum = (func_rtdGammaGetPanelBitNum)GetProcAddress(hInst, "rtdGammaGetPanelBitNum");
+	g_rtdGammaSetEOTF = (func_rtdGammaSetEOTF)GetProcAddress(hInst, "rtdGammaSetEOTF");
+	g_rtdGammaGetEOTF = (func_rtdGammaGetEOTF)GetProcAddress(hInst, "rtdGammaGetEOTF");
+    g_rtdGammaGetOCCLockCT = (func_rtdGammaGetOCCLockCT)GetProcAddress(hInst, "rtdGammaGetOCCLockCT");
+    g_rtdGammaSetOCCLockCT = (func_rtdGammaSetOCCLockCT)GetProcAddress(hInst, "rtdGammaSetOCCLockCT");
+
+	g_rtdGammaSetNoInterpolationMode = (func_rtdGammaSetNoInterpolationMode)GetProcAddress(hInst, "rtdGammaSetNoInterpolationMode");
+	g_rtdGammaGetNoInterpolationMode = (func_rtdGammaGetNoInterpolationMode)GetProcAddress(hInst, "rtdGammaGetNoInterpolationMode");
+
+    g_rtdGammaSetLockEnd = (func_rtdGammaSetLockEnd)GetProcAddress(hInst, "rtdGammaSetLockEnd");
+    g_rtdGammaSetLUTCompensate = (func_rtdGammaSetLUTCompensate)GetProcAddress(hInst, "rtdGammaSetLUTCompensate");
+	g_rtdGammaSetFreesyncIIEDIDLv = (func_rtdGammaSetFreesyncIIEDIDLv)GetProcAddress(hInst, "rtdGammaSetFreesyncIIEDIDLv");
+	g_rtdGammaSetMinLv = (func_rtdGammaSetMinLv)GetProcAddress(hInst, "rtdGammaSetMinLv");
+    g_rtdGammaClearPara = (func_rtdGammaClearPara)GetProcAddress(hInst, "rtdGammaClearPara");
+    g_rtdGammaSetIDNum = (func_rtdGammaSetIDNum)GetProcAddress(hInst, "rtdGammaSetIDNum");
+    g_rtdDICOMSetDICOMMode = (func_rtdDICOMSetDICOMMode)GetProcAddress(hInst, "rtdDICOMSetDICOMMode"); // Hung
+    g_rtdDICOMSetDICOMxy = (func_rtdDICOMSetDICOMxy)GetProcAddress(hInst, "rtdDICOMSetDICOMxy"); // Hung
+	g_rtdDICOMSetDICOMLimitLv = (func_rtdDICOMSetDICOMLimitLv)GetProcAddress(hInst, "rtdDICOMSetDICOMLimitLv"); // Hung
+	g_rtdDICOMSetDICOMAL = (func_rtdDICOMSetDICOMAL)GetProcAddress(hInst, "rtdDICOMSetDICOMAL"); // Hung
+	g_rtdDICOMGetDICOMAL = (func_rtdDICOMGetDICOMAL)GetProcAddress(hInst, "rtdDICOMGetDICOMAL");
+	g_rtdDICOMGetDICOMRef = (func_rtdDICOMGetDICOMRef)GetProcAddress(hInst, "rtdDICOMGetDICOMRef"); // Hung
+    g_rtdDICOMGetMinJND = (func_rtdDICOMGetMinJND)GetProcAddress(hInst, "rtdDICOMGetMinJND");
+    g_rtdDICOMGetMaxJND = (func_rtdDICOMGetMaxJND)GetProcAddress(hInst, "rtdDICOMGetMaxJND");
+    g_rtdDICOMGetJNDStep = (func_rtdDICOMGetJNDStep)GetProcAddress(hInst, "rtdDICOMGetJNDStep");
+    g_rtdGammaPatternWhite = (func_rtdGammaPatternWhite)GetProcAddress(hInst, "rtdGammaPatternWhite");
+    g_rtdGammaPatternRGB = (func_rtdGammaPatternRGB)GetProcAddress(hInst, "rtdGammaPatternRGB");
+    g_rtdGammaPatternRGBScale= (func_rtdGammaPatternRGBScale)GetProcAddress(hInst, "rtdGammaPatternRGBScale");
+	g_rtdGammaGetInputGammaToneMappingLUT = (func_rtdGammaGetInputGammaToneMappingLUT)GetProcAddress(hInst, "rtdGammaGetInputGammaToneMappingLUT");
+	g_rtdGammaGetMaxPanelLvPQ = (func_rtdGammaGetMaxPanelLvPQ)GetProcAddress(hInst, "rtdGammaGetMaxPanelLvPQ");
+	g_rtdGammaGetNoToneMappingBound = (func_rtdGammaGetNoToneMappingBound)GetProcAddress(hInst, "rtdGammaGetNoToneMappingBound");
+	g_rtdGammaGetMaxPanelLvEDIDCV = (func_rtdGammaGetMaxPanelLvEDIDCV)GetProcAddress(hInst, "rtdGammaGetMaxPanelLvEDIDCV");
+    g_rtdGammaGetHDRInitial = (func_rtdGammaGetHDRInitial)GetProcAddress(hInst, "rtdGammaGetHDRInitial");
+	g_rtdGammaGetLocalDimmingIGLUT = (func_rtdGammaGetLocalDimmingIGLUT)GetProcAddress(hInst, "rtdGammaGetLocalDimmingIGLUT");
+	g_rtdGammaGetFreesync2IGLUT = (func_rtdGammaGetFreesync2IGLUT)GetProcAddress(hInst, "rtdGammaGetFreesync2IGLUT");
+    g_rtdGammaPatternGray = (func_rtdGammaPatternGray)GetProcAddress(hInst, "rtdGammaPatternGray");
+    g_rtdGammaGetWhiteLv = (func_rtdGammaGetWhiteLv)GetProcAddress(hInst, "rtdGammaGetWhiteLv");
+    g_rtdGammaGetWhiteX = (func_rtdGammaGetWhiteX)GetProcAddress(hInst, "rtdGammaGetWhiteX");
+    g_rtdGammaGetWhiteY = (func_rtdGammaGetWhiteY)GetProcAddress(hInst, "rtdGammaGetWhiteY");
+    g_rtdGammaCalculateTotalCheckSum = (func_rtdGammaCalculateTotalCheckSum)GetProcAddress(hInst, "rtdGammaCalculateTotalCheckSum");
+    g_rtdGammaGetOGCLUT = (func_rtdGammaGetOGCLUT)GetProcAddress(hInst, "rtdGammaGetOGCLUT");
+    g_rtdGammaGetDICOMLUT = (func_rtdGammaGetDICOMLUT)GetProcAddress(hInst, "rtdGammaGetDICOMLUT");
+    g_rtdGammaGetOCCLUT = (func_rtdGammaGetOCCLUT)GetProcAddress(hInst, "rtdGammaGetOCCLUT");
+    g_rtdGammaGetPanelNativeError = (func_rtdGammaGetPanelNativeError)GetProcAddress(hInst, "rtdGammaGetPanelNativeError");
+	g_rtdGammaGetFixedMeasureData = (func_rtdGammaGetFixedMeasureData)GetProcAddress(hInst, "rtdGammaGetFixedMeasureData");
+    g_rtdGammaSet1To7PatternGray = (func_rtdGammaSet1To7PatternGray)GetProcAddress(hInst, "rtdGammaSet1To7PatternGray");
+    g_rtdGammaSetLUTDecayMode = (func_rtdGammaSetLUTDecayMode)GetProcAddress(hInst, "rtdGammaSetLUTDecayMode");
+    g_rtdColormapClearPara = (func_rtdColormapClearPara)GetProcAddress(hInst, "rtdColormapClearPara");
+    g_rtdColormapGetCofficient = (func_rtdColormapGetCofficient)GetProcAddress(hInst, "rtdColormapGetCofficient");
+	g_rtdColormapGetPanelMatrix= (func_rtdColormapGetPanelMatrix)GetProcAddress(hInst, "rtdColormapGetPanelMatrix");
+    g_rtdColormapGetLUTCofficient = (func_rtdColormapGetLUTCofficient)GetProcAddress(hInst, "rtdColormapGetLUTCofficient");
+    g_rtdColormapGetColorSpace = (func_rtdColormapGetColorSpace)GetProcAddress(hInst, "rtdColormapGetColorSpace");
+    g_rtdColormapSetColorSpace = (func_rtdColormapSetColorSpace)GetProcAddress(hInst, "rtdColormapSetColorSpace");
+    g_rtdColormapSetUserColorSpace  = (func_rtdColormapSetUserColorSpace)GetProcAddress(hInst, "rtdColormapSetUserColorSpace");
+    g_rtdColormapSetUserDefineGamut  = (func_rtdColormapSetUserDefineGamut)GetProcAddress(hInst, "rtdColormapSetUserDefineGamut");
+    g_rtdColormapGetUserDefineGamut  = (func_rtdColormapGetUserDefineGamut)GetProcAddress(hInst, "rtdColormapGetUserDefineGamut");
+    g_rtdColormapSetPanelOrgGamut  = (func_rtdColormapSetPanelOrgGamut)GetProcAddress(hInst, "rtdColormapSetPanelOrgGamut");
+    g_rtdColormapGetPanelOrgGamut  = (func_rtdColormapGetPanelOrgGamut)GetProcAddress(hInst, "rtdColormapGetPanelOrgGamut");
+    g_rtdColormapSetBatchLvxy = (func_rtdColormapSetBatchLvxy)GetProcAddress(hInst, "rtdColormapSetBatchLvxy");
+	g_rtdColormapGetColorMatrix = (func_rtdColormapGetColorMatrix)GetProcAddress(hInst, "rtdColormapGetColorMatrix");
+	g_rtdColormapGetHDRColorMatrix = (func_rtdColormapGetHDRColorMatrix)GetProcAddress(hInst, "rtdColormapGetHDRColorMatrix");
+	g_rtdColormapGetHDRTargetXYZ = (func_rtdColormapGetHDRTargetXYZ)GetProcAddress(hInst, "rtdColormapGetHDRTargetXYZ");
+	g_rtdColormapSaveMatrix = (func_rtdColormapSaveMatrix)GetProcAddress(hInst, "rtdColormapSaveMatrix");
+    g_rtdColormapSetSoftProofMatrix = (func_rtdColormapSetSoftProofMatrix)GetProcAddress(hInst, "rtdColormapSetSoftProofMatrix");
+    g_rtdColormapSetBlueCompensate = (func_rtdColormapSetBlueCompensate)GetProcAddress(hInst, "rtdColormapSetBlueCompensate");
+	g_rtdColormapSetHDRsRGBpanel = (func_rtdColormapSetHDRsRGBpanel)GetProcAddress(hInst, "rtdColormapSetHDRsRGBpanel");
+    g_rtdColormapSetWhiteLvxy = (func_rtdColormapSetWhiteLvxy)GetProcAddress(hInst, "rtdColormapSetWhiteLvxy");
+	g_rtdsRGBColorClearPara = (func_rtdsRGBColorClearPara)GetProcAddress(hInst, "rtdsRGBColorClearPara");
+	g_rtdsRGBColorSetInput = (func_rtdsRGBColorSetInput)GetProcAddress(hInst, "rtdsRGBColorSetInput");
+	g_rtdsRGBColorGetOutput = (func_rtdsRGBColorGetOutput)GetProcAddress(hInst, "rtdsRGBColorGetOutput");
+	g_rtdsRGBColorSetWhiteLv = (func_rtdsRGBColorSetWhiteLv)GetProcAddress(hInst, "rtdsRGBColorSetWhiteLv");
+	g_rtdsRGBColorgetValues = (func_rtdsRGBColorgetValues)GetProcAddress(hInst, "rtdsRGBColorgetValues");
+
+	if((g_rtdGammaSetGrayPattern            != NULL)
+        &&(g_rtdGammaGetGrayPatternNum      != NULL)
+        &&(g_rtdGammaGetGrayPattern         != NULL)
+        &&(g_rtdGammaSetGammaNum            != NULL)
+        &&(g_rtdGammaGetGammaNum            != NULL)
+        &&(g_rtdGammaSetGammaIndex          != NULL)
+        &&(g_rtdGammaGetGammaIndex          != NULL)
+        &&(g_rtdGammaSetCTNum               != NULL)
+        &&(g_rtdGammaGetCTNum               != NULL)
+        &&(g_rtdGammaSetTxy                 != NULL)
+        &&(g_rtdGammaGetTxy                 != NULL)
+        //&&(g_rtdGammaSetInputBitNum         != NULL)
+        //&&(g_rtdGammaGetInputBitNum         != NULL)
+        &&(g_rtdGammaSetPanelBitNum         != NULL)
+        &&(g_rtdGammaGetPanelBitNum         != NULL)
+        &&(g_rtdGammaSetEOTF				!= NULL)
+        &&(g_rtdGammaGetEOTF				!= NULL)
+        &&(g_rtdGammaGetOCCLockCT           != NULL)
+        &&(g_rtdGammaSetOCCLockCT           != NULL)
+        &&(g_rtdGammaSetNoInterpolationMode != NULL)
+        &&(g_rtdGammaGetNoInterpolationMode != NULL)
+        &&(g_rtdGammaSetLockEnd             != NULL)
+        &&(g_rtdGammaSetLUTCompensate       != NULL)
+        &&(g_rtdGammaSetFreesyncIIEDIDLv    != NULL)
+        &&(g_rtdGammaSetMinLv       		!= NULL)
+        &&(g_rtdGammaClearPara              != NULL)
+        &&(g_rtdGammaSetIDNum               != NULL)
+        &&(g_rtdDICOMSetDICOMMode           != NULL) // Hung
+        &&(g_rtdDICOMSetDICOMxy             != NULL) // Hung
+        &&(g_rtdDICOMSetDICOMLimitLv        != NULL) // Hung
+        &&(g_rtdDICOMSetDICOMAL             != NULL) // Hung
+        &&(g_rtdDICOMGetDICOMAL             != NULL)
+        &&(g_rtdDICOMGetDICOMRef            != NULL) // Hung
+        &&(g_rtdDICOMGetMinJND              != NULL)
+        &&(g_rtdDICOMGetMaxJND              != NULL)
+        &&(g_rtdDICOMGetJNDStep             != NULL)
+        &&(g_rtdGammaPatternWhite           != NULL)
+        &&(g_rtdGammaPatternRGB             != NULL)
+        &&(g_rtdGammaPatternRGBScale        != NULL)
+        &&(g_rtdGammaGetHDRInitial          != NULL)
+        &&(g_rtdGammaGetInputGammaToneMappingLUT != NULL)
+        &&(g_rtdGammaGetMaxPanelLvPQ        != NULL)
+        &&(g_rtdGammaGetNoToneMappingBound  != NULL)
+        &&(g_rtdGammaGetMaxPanelLvEDIDCV    != NULL)
+        &&(g_rtdGammaGetLocalDimmingIGLUT   != NULL)
+        &&(g_rtdGammaGetFreesync2IGLUT   	!= NULL)
+        &&(g_rtdGammaPatternGray            != NULL)
+        &&(g_rtdGammaGetWhiteLv             != NULL)
+        &&(g_rtdGammaGetWhiteX              != NULL)
+        &&(g_rtdGammaGetWhiteY              != NULL)
+        &&(g_rtdGammaCalculateTotalCheckSum != NULL)
+        &&(g_rtdGammaGetOGCLUT              != NULL)
+        &&(g_rtdGammaGetDICOMLUT              != NULL)
+        &&(g_rtdGammaGetOCCLUT              != NULL)
+        &&(g_rtdGammaGetPanelNativeError   	!= NULL)
+        &&(g_rtdGammaGetFixedMeasureData 	!= NULL)
+        &&(g_rtdGammaSet1To7PatternGray   	!= NULL)
+        &&(g_rtdGammaSetLUTDecayMode   		!= NULL)
+		&& (g_rtdColormapClearPara          != NULL)
+		&& (g_rtdColormapGetCofficient      != NULL)
+		&& (g_rtdColormapGetPanelMatrix     != NULL)
+		&& (g_rtdColormapGetLUTCofficient   != NULL)
+		&& (g_rtdColormapGetColorSpace      != NULL)
+		&& (g_rtdColormapSetColorSpace      != NULL)
+		&& (g_rtdColormapSetUserColorSpace  != NULL)
+		&& (g_rtdColormapSetUserDefineGamut != NULL)
+		&& (g_rtdColormapGetUserDefineGamut != NULL)
+		&& (g_rtdColormapSetPanelOrgGamut   != NULL)
+		&& (g_rtdColormapGetPanelOrgGamut   != NULL)
+		&& (g_rtdColormapSetBatchLvxy         != NULL)
+		&& (g_rtdColormapGetColorMatrix       != NULL)
+		&& (g_rtdColormapGetHDRColorMatrix    != NULL)
+		&& (g_rtdColormapGetHDRTargetXYZ      != NULL)
+		&& (g_rtdColormapSaveMatrix           != NULL)
+		&& (g_rtdColormapSetSoftProofMatrix   != NULL)
+		&& (g_rtdColormapSetBlueCompensate    != NULL)
+		&& (g_rtdColormapSetHDRsRGBpanel      != NULL)
+		&& (g_rtdColormapSetWhiteLvxy         != NULL)
+		&& (g_rtdsRGBColorClearPara           != NULL)
+		&& (g_rtdsRGBColorSetInput            != NULL)
+		&& (g_rtdsRGBColorGetOutput           != NULL)
+		&& (g_rtdsRGBColorSetWhiteLv          != NULL)
+		&& (g_rtdsRGBColorgetValues           != NULL))
+    {
+        return hInst;
+    }
+
+    FreeLibrary(hInst);
+    return NULL;
+}
+
+
+VOID FreeOGCOCCDLL(HINSTANCE hInst)
+{
+    if (hInst != NULL)
+    {
+        FreeLibrary(hInst);
+    }
+
+}
+

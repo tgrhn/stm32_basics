@@ -1,12 +1,12 @@
-17:17:46 **** Incremental Build of configuration Debug for project bb ****
+10:06:37 **** Incremental Build of configuration Debug for project bb ****
 make -j8 all 
 arm-none-eabi-size   bb.elf 
    text	   data	    bss	    dec	    hex	filename
-   5148	     20	   1572	   6740	   1a54	bb.elf
+  19524	     36	   1708	  21268	   5314	bb.elf
 Finished building: default.size.stdout
  
 arm-none-eabi-objcopy -O ihex bb.elf bb.hex
  
 
-17:17:47 Build Finished. 0 errors, 0 warnings. (took 728ms)
+10:06:37 Build Finished. 0 errors, 0 warnings. (took 508ms)
 

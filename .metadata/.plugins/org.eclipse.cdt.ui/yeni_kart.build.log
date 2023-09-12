@@ -1,4 +1,4 @@
-09:28:55 **** Incremental Build of configuration Debug for project yeni_kart ****
+13:56:08 **** Incremental Build of configuration Debug for project yeni_kart ****
 make -j8 all 
 arm-none-eabi-size   yeni_kart.elf 
    text	   data	    bss	    dec	    hex	filename
@@ -8,5 +8,5 @@ Finished building: default.size.stdout
 arm-none-eabi-objcopy -O ihex yeni_kart.elf yeni_kart.hex
  
 
-09:28:56 Build Finished. 0 errors, 0 warnings. (took 560ms)
+13:56:08 Build Finished. 0 errors, 0 warnings. (took 459ms)
 

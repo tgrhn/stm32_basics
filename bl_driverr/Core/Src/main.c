@@ -96,6 +96,8 @@ uint16_t ina219_raw_power;
 uint16_t ina219_power_value;
 uint16_t ina219_raw_current;
 uint16_t ina219_current_value;
+uint16_t ina219_currentDivider_mA = 33;    // Current LSB = 30uA per bit
+uint16_t ina219_powerMultiplier_mW = 0.66f; // Power LSB = 666uW per bit
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,7 +115,8 @@ static void MX_I2C2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/*void ina219_calibration()
+
+void ina219_calibration()
 {
 	int max_expected_current = 1; // 1 Amper.
 	// adjusting configuration pin
@@ -124,12 +127,9 @@ static void MX_I2C2_Init(void);
 	current_lsb = max_expected_current / 32767; // max_expected / 2^15.
 	power_lsb = current_lsb * 20;
 	cal = 0.04096 / (current_lsb * r_shunt); // 13430
-	uint16_t ina219_currentDivider_mA = 33;    // Current LSB = 30uA per bit
-	uint16_t ina219_powerMultiplier_mW = 0.66f; // Power LSB = 666uW per bit
-
 	HAL_I2C_Mem_Write(&hi2c2, U1_ADDRESS, 0x05, 2, cal, 2, HAL_MAX_DELAY); // write to calibration register to operate current and power registers.
 }
-/*
+
 void ina219_reading()
 {
 	//reading shunt voltage
@@ -141,20 +141,19 @@ void ina219_reading()
 	HAL_I2C_Master_Transmit(&hi2c2, U1_ADDRESS << 1, &bus_ina219, 1, HAL_MAX_DELAY);
 	HAL_I2C_Master_Receive(&hi2c2, U1_ADDRESS << 1, &ina219_raw_bus, 2, HAL_MAX_DELAY);
 	ina219_bus_value = (ina219_raw_bus >> 3) * 4;
-	ina219_bus_value = ina219_bus_value * 0.001;
+	ina219_bus_value = ina219_bus_value * 0.001; // V.
 
 	// reading power
 	HAL_I2C_Master_Transmit(&hi2c2, U1_ADDRESS << 1, &power_ina219, 1, HAL_MAX_DELAY);
 	HAL_I2C_Master_Receive(&hi2c2, U1_ADDRESS << 1, &ina219_raw_power, 2, HAL_MAX_DELAY);
-	ina219_power_value = ina219_powerMultiplier_mW * ina219_raw_power;
+	ina219_power_value = ina219_powerMultiplier_mW * ina219_raw_power; //mW.
 
 	// reading current
 	HAL_I2C_Master_Transmit(&hi2c2, U1_ADDRESS << 1, &current_ina219, 1, HAL_MAX_DELAY);
 	HAL_I2C_Master_Receive(&hi2c2, U1_ADDRESS << 1, &ina219_raw_current, 2, HAL_MAX_DELAY);
-	ina219_current_value =  ina219_raw_power / ina219_powerMultiplier_mW;
-
-
+	ina219_current_value =  ina219_raw_power / ina219_currentDivider_mA; // mA.
 }
+
 /* USER CODE END 0 */
 
 /**

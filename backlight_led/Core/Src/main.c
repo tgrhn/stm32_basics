@@ -40,6 +40,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c2;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim14;
@@ -47,6 +49,29 @@ TIM_HandleTypeDef htim16;
 TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN PV */
+uint8_t rxData;
+uint8_t lower;
+uint8_t upper;
+uint8_t lower_0;
+uint8_t upper_0;
+
+
+uint8_t ID = 0x87; // register addr
+uint8_t ID4 = 0x85; // register addr
+uint8_t reg = 0x80;
+uint8_t reg2 = 0x85;
+uint8_t status_reg;
+uint8_t command1 = 0x01;
+uint8_t command2 = 0x12;
+uint16_t data_0;
+uint16_t data_1;
+
+#define U4_ADDRESS 0x41 // INA3221
+#define U2_ADDRESS 0x44 // INA219BID
+#define U1_ADDRESS 0x40 // INA3221
+#define U3_ADDRESS 0x45 // ISL28022
+#define ADDRESS 0x29 // LTR
+
 
 /* USER CODE END PV */
 
@@ -58,12 +83,35 @@ static void MX_TIM3_Init(void);
 static void MX_TIM14_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_TIM17_Init(void);
+static void MX_I2C2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void ltr_read()
+{
+	//Configuring operation modes
+	HAL_I2C_Mem_Write(&hi2c2, ADDRESS << 1, reg, 1, &command1, 1, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Write(&hi2c2, ADDRESS << 1, reg2, 1, &command2, 1, HAL_MAX_DELAY);
+
+	//CH1
+	HAL_I2C_Mem_Read(&hi2c2, ADDRESS << 1, 0x88, 1, &lower, 1, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Read(&hi2c2, ADDRESS << 1, 0x89, 1, &upper, 1, HAL_MAX_DELAY);
+
+	data_1 = (upper << 8) | lower;
+
+	//CH0
+	HAL_I2C_Mem_Read(&hi2c2, ADDRESS << 1, 0x8A, 1, &lower_0, 1, HAL_MAX_DELAY);
+	HAL_I2C_Mem_Read(&hi2c2, ADDRESS << 1, 0x8B, 1, &upper_0, 1, HAL_MAX_DELAY);
+
+	data_0 = (upper_0 << 8) | lower_0;
+
+	// Reading status
+	HAL_I2C_Mem_Read(&hi2c2, ADDRESS << 1, 0x8C, 1, &status_reg, 1, HAL_MAX_DELAY);
+
+}
 
 /* USER CODE END 0 */
 
@@ -100,20 +148,21 @@ int main(void)
   MX_TIM14_Init();
   MX_TIM16_Init();
   MX_TIM17_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
-  HAL_TIM_PWM_Start(&htim14, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  	  // LTR Reading Register
+		//  HAL_I2C_Master_Transmit(&hi2c2, ADDRESS << 1, &ID4, 1, HAL_MAX_DELAY);
+		 // HAL_I2C_Master_Receive(&hi2c2, ADDRESS << 1, &rxData, 1, HAL_MAX_DELAY);
+
+		  ltr_read();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -159,6 +208,54 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.Timing = 0x00303D5B;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
+
 }
 
 /**

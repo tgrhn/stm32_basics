@@ -1,4 +1,4 @@
-09:33:31 **** Incremental Build of configuration Debug for project bl_driverr ****
+10:05:37 **** Incremental Build of configuration Debug for project bl_driverr ****
 make -j8 all 
 arm-none-eabi-size   bl_driverr.elf 
    text	   data	    bss	    dec	    hex	filename
@@ -6,5 +6,5 @@ arm-none-eabi-size   bl_driverr.elf
 Finished building: default.size.stdout
  
 
-09:33:31 Build Finished. 0 errors, 0 warnings. (took 323ms)
+10:05:38 Build Finished. 0 errors, 0 warnings. (took 256ms)
 

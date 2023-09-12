@@ -1,4 +1,4 @@
-16:13:13 **** Incremental Build of configuration Debug for project button_capture ****
+09:25:47 **** Build of configuration Debug for project button_capture ****
 make -j8 all 
 arm-none-eabi-size   button_capture.elf 
    text	   data	    bss	    dec	    hex	filename
@@ -6,5 +6,5 @@ arm-none-eabi-size   button_capture.elf
 Finished building: default.size.stdout
  
 
-16:13:13 Build Finished. 0 errors, 0 warnings. (took 392ms)
+09:25:47 Build Finished. 0 errors, 0 warnings. (took 590ms)
 

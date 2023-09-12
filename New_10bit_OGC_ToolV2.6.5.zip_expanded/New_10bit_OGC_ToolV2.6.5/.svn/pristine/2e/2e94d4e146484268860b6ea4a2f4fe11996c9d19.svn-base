@@ -1,0 +1,6667 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Dll/Ca210Ctrl_Export.h"
+#include "Dll/OGCOCC_Export.h"
+#include "mmsystem.h"
+#include <math.h>
+//#include "ChartForm.h"
+#include "Dll/OGCOCC_Export.h"
+#include "Dll/Comm_Export.h"
+#include "Pattern.h"
+#include "FWDebug.h"
+
+#include "Test.h"
+#include "GamutVerify.h"
+#include "GammaVerify.h"
+#include "Measure.h"
+
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+using namespace std;
+CRsComm g_stComm;
+
+
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TfrmDemo *frmDemo;
+
+#define _ONE_TRAMSMIT_LIMIT 110  // buffer volum - 6: 51, 8x, 03, FC, i, chk
+#define _LVDS_DISP_18_BIT                       0
+#define _LVDS_DISP_24_BIT                       1
+#define _LVDS_DISP_30_BIT                       2
+
+#define _FS2_Max_Lv_Criteria					400
+#define _FS2_Min_Lv_Criteria					0.25
+
+#define _DISP_CALIB_FW_VERSION      			0x0003
+
+bool g_bOCCVerifyOK = true;
+bool g_bOGCVerifyOK = true;
+BYTE g_bHDRVerifyOK = 0; // 1 gamma fail 2 gamul fail
+float fPanelRGBWxy[4][2] = {0};
+float fPanelLvRange[2][2] = {0};
+float fPanelLvRangeInEDID[2][2] = {0};
+float fPanelWhitexy[2] = {0};
+BYTE ucHDRIGVersion = 0; // 20170209 Hung modify for FW IG Version
+BYTE ucHDRIGNum = 0; // 20170123 Hung modify for 540nits tone mapping
+BYTE MaxCLL_CV = 0;
+float fMaxCLL = 0;
+float fMaxFALL = 0;
+float fMinCLL = 0;
+int ucFWVersion = 0;//_DISP_CALIB_FW_VERSION;
+
+int TimeStart1 = 0;
+int TimeCount1 = 0;
+
+int IICDelay = 200000;
+byte byPolling = 1;
+BYTE IICSpeed = 100;
+BYTE ucSlave = 0x6E;
+BYTE ucSub = 0x51;
+
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_RED1          0x51
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_RED2          0x52
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_LAST_RED      0x5F
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_GREEN1        0x65
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_GREEN2        0x66
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_LAST_GREEN    0x73
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_BLUE1         0x79
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_BLUE2         0x7A
+#define _DDCCI_DISP_CALIB_OGC_MEASURE_LAST_BLUE     0x87
+
+float fGamutPoint[_TOTAL_COLORSPACE_NUM + 1][3][2] =
+{
+    // sRGB
+    0.64, 0.33, 0.3, 0.6, 0.15, 0.06,
+    // AdobeRGB
+    0.64, 0.33, 0.21, 0.71, 0.15, 0.06,
+    // UserDefine
+    0.64, 0.33, 0.21, 0.71, 0.15, 0.06,   // To be edit
+    // EBU
+    0.64, 0.33,0.29, 0.6, 0.15, 0.06,
+    // Soft Proof
+    0.64, 0.33, 0.3, 0.6, 0.15, 0.06,
+    // Rec.709
+    0.64, 0.33, 0.3, 0.6, 0.15, 0.06,
+    // DCI-P3
+    0.68, 0.32, 0.265, 0.69, 0.15, 0.06,
+    // SMPTE-C
+    0.63, 0.34, 0.31, 0.595, 0.155, 0.07,
+    // UserDefine2
+    0.64, 0.33, 0.21, 0.71, 0.15, 0.06,   // To be edit
+    // Panel Org
+    0.68, 0.32, 0.265, 0.69, 0.15, 0.06,   // To be edit
+};
+
+BYTE g_ucVerifyType = 0;
+
+
+String GetFileVersion(char* filePath);
+
+//---------------------------------------------------------------------------
+
+__fastcall TfrmDemo::TfrmDemo(TComponent* Owner)
+    : TForm(Owner)
+{
+    m_hInstCA210 = NULL;
+    m_hInstRTDFunction = NULL;
+    m_hInstOGCOCC = NULL;
+    m_hInstCA210 = InitCa210CtrlDLL("Dll/Ca210Ctrl.dll");  //load ca210 dll
+    if(m_hInstCA210 == NULL)
+    {
+        ShowMessage("Load CA-210 Dll Fail!");
+    }
+    String strDllFileDir = ExtractFileDir(Application->ExeName) + "\\Dll\\Comm.dll";
+    STRUCT_ENUM_ERROR_TYPE enumError = _ERROR_SUCCESS;
+
+	if(g_stComm.LoadCommDllFile(strDllFileDir.c_str()))
+	{
+         enumError = g_stComm.Initiallize();
+         if(USBType->ItemIndex)
+         {
+		enumError = g_stComm.SetCommByID(_ENUM_COMM_FTDIUSB);
+         }
+         else
+         {
+		enumError = g_stComm.SetCommByID(_ENUM_COMM_REALTEKUSB);
+         }
+         //umError = g_stComm.SetCommByID(_ENUM_COMM_REALTEKUSB);
+         enumError = g_stComm.SetDebugMode(_DEBUG_DEBUG);
+         enumError = g_stComm.SetI2CSpeed(IICSpeed);
+
+        if(byPolling != 0)
+        {
+            STRUCT_WAITING_STRUCT stWaiting = {_WAITING_POLLING, IICDelay};
+            enumError = g_stComm.SetWaitingMode(stWaiting);
+
+        }
+        else
+        {
+            STRUCT_WAITING_STRUCT stWaiting = {_WAITING_DELAY, IICDelay};
+            enumError = g_stComm.SetWaitingMode(stWaiting);
+        }
+
+
+		if(enumError != _ERROR_SUCCESS)
+		{
+			ShowMessage("Initial Communication failed!");
+		}
+	}
+	else
+	{
+		ShowMessage("Load Comm.dll failed!");
+	}
+
+    m_hInstOGCOCC = InitOGCOCCDLL("Dll/OGCOCC.dll");   // Load OGC dll
+
+    if(m_hInstOGCOCC == NULL)
+    {
+        ShowMessage("Load OGCOCC Dll Fail!");
+    }
+
+    frmDemo->Caption = "UHD Series OGC Tool V2.6.3, OGCOCC Dll V" + GetFileVersion("Dll/OGCOCC.dll");
+
+    chkbMinLvModeClick(this);
+}
+//---------------------------------------------------------------------------
+__fastcall TfrmDemo::~TfrmDemo()
+{
+    FreeCa210CtrlDLL(m_hInstCA210);
+    FreeOGCOCCDLL(m_hInstOGCOCC);
+    g_stComm.FreeCommDllFile();
+}
+//---------------------------------------------------------------------------
+void GetLinearRGB(int *InputPattern, float OutputPattern[7][3], BYTE ucColorType, int nInNF, int nOutNF)
+{
+    BYTE i = 0, j = 0;
+
+/*
+    if(ucColorType >= _TOTAL_COLORSPACE_NUM)
+    {
+        ShowMessage("Color Domain Not Supported! 5");
+        return;
+    }
+*/
+    double dNFInput = 0;
+
+    for(i = 0; i < 7; i++)
+    {
+        for(j = 0; j < 3; j++)
+        {
+            switch(ucColorType)
+            {
+                case _SRGB:
+                case _SOFT_PROOF:
+                default:
+                        dNFInput = (double)InputPattern[3 * i + j]/nInNF;
+
+                        if(dNFInput <= 0.03928)
+                        {
+                            OutputPattern[i][j] = (int)(dNFInput / 12.92 * nOutNF + 0.5);
+                        }
+                        else
+                        {
+                            OutputPattern[i][j] = (int)(pow((dNFInput + 0.055)/1.055, 2.4) * nOutNF + 0.5);
+                        }
+                    break;
+
+                case _ADOBERGB:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 2.19921875) * nOutNF + 0.5);
+                    break;
+
+                case _EBU:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 2.35) * nOutNF + 0.5);
+                    break;
+
+                case _REC_709:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 2.4) * nOutNF + 0.5);
+                    break;
+
+                case _DCI_P3:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 2.6) * nOutNF + 0.5);
+                    break;
+				case _SMPTE_C:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 2.2) * nOutNF + 0.5);
+                    break;
+
+                case _BYPASS:
+                        OutputPattern[i][j] = (int)(pow((float)InputPattern[3 * i + j]/nInNF, 1.0) * nOutNF + 0.5);;
+                    break;
+
+                case _HDR_BT2020:
+                        OutputPattern[i][j] = (float) InputPattern[3 * i + j] / nInNF;
+                    break;
+            }
+        }
+    }
+}
+
+BYTE SendAndCheck(BYTE ucLength, BYTE *Command, BYTE *ReceData)
+{
+    int nIsRead = 0xFF;
+
+    int count = 0;
+    int FTDIdelayTime = StrToInt(frmDemo->edtFTDIdelay->Text);
+
+    if(g_rtdOGCWriteDDCCI(ucLength, Command, IICDelay, byPolling, IICSpeed) != _ERROR_SUCCESS)
+	{
+          Sleep(10);
+
+         while(g_rtdOGCWriteDDCCI(ucLength, Command, IICDelay, byPolling, IICSpeed) != _ERROR_SUCCESS)
+         {
+            Sleep(10);
+
+		    if(frmDemo->USBType->ItemIndex)
+		    {
+	             Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+		    }
+
+            count++;
+            if(count >= 20)
+            {
+                return 0;
+            }
+         }
+	}
+
+     if(frmDemo->USBType->ItemIndex)
+     {
+           Sleep(50);
+     }
+
+	nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 7, ReceData, IICDelay, IICSpeed, byPolling);
+
+    count = 0;
+
+    while(nIsRead!= _ERROR_SUCCESS)
+    {
+        Sleep(50);
+
+        if(frmDemo->USBType->ItemIndex)
+        {
+           Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+        }
+
+        nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 7, ReceData, IICDelay, IICSpeed, byPolling);
+        count++;
+
+        if(count >= 20)
+        {
+            return 0;
+        }
+    }
+
+    if((ReceData[2] == 'P')&&(ReceData[3] == 'A')&&(ReceData[4] == 'S')&&(ReceData[5] == 'S'))
+    {
+        return 1;
+    }
+
+    return 0;
+
+}
+
+bool SendCommand(BYTE ucLength, BYTE* Command)
+{
+    BYTE ReceData[56] = {0};
+
+    while(!SendAndCheck(ucLength, Command, ReceData))
+    {
+        if((ReceData[2] == 'F') && (ReceData[3] == 'W') && (ReceData[4] == 'E'))
+        {
+            ShowMessage("FW Define Error!");
+        }
+        else if((ReceData[2] == 'E') && (ReceData[3] == 'R') && (ReceData[4] == 'A') && (ReceData[5] == 'S'))
+        {
+            ShowMessage("Flash Erase Error!");
+        }
+        else if((ReceData[2] == 'C') && (ReceData[3] == 'R') && (ReceData[4] == 'C') && (ReceData[5] == 'E'))
+        {
+            ShowMessage("Checksum Error!");
+        }
+        else
+        {
+            ShowMessage("Communication Error!");
+        }
+        return false;
+
+    }
+    return true;
+}
+
+BYTE CalculateCheckSum(BYTE ucLength, BYTE *Command)
+{
+    BYTE ucCheckSum = 0;
+
+    for(int i = 0; i < ucLength; i++)
+    {
+        ucCheckSum += Command[i];
+    }
+    return ucCheckSum;
+}
+
+unsigned long HextoInt(char hexnum[10],int bitnum)
+{
+    int num_loop;
+    char hex_b;//,temp[20];
+    unsigned long Int_Value=0;
+    for(num_loop=0;num_loop<bitnum;num_loop++)
+    {
+        switch (hexnum[num_loop])
+        {
+            case '0':hex_b=0; break;
+            case '1':hex_b=1; break;
+            case '2':hex_b=2; break;
+            case '3':hex_b=3; break;
+            case '4':hex_b=4; break;
+            case '5':hex_b=5; break;
+            case '6':hex_b=6; break;
+            case '7':hex_b=7;  break;
+            case '8':hex_b=8;  break;
+            case '9':hex_b=9;  break;
+            case 'A':hex_b=10; break;
+            case 'B':hex_b=11; break;
+            case 'C':hex_b=12; break;
+            case 'D':hex_b=13; break;
+            case 'E':hex_b=14; break;
+            case 'F':hex_b=15; break;
+            case 'a':hex_b=10; break;
+            case 'b':hex_b=11; break;
+            case 'c':hex_b=12; break;
+            case 'd':hex_b=13; break;
+            case 'e':hex_b=14; break;
+            case 'f':hex_b=15; break;
+            //fred071204, for other character
+            default: hex_b=16; break;
+        }
+        if (hex_b<16)
+        {
+            Int_Value=Int_Value<<4;
+            Int_Value=Int_Value+ hex_b;
+        }
+    }
+
+    return(Int_Value);
+}
+
+BYTE TrimString(BYTE *ucPreCommand, BYTE *Command, int *nSectorLength, int *nPointer)
+{
+    BYTE ucTransLen = 0;
+    BYTE ucIndex = 0;
+    BYTE uclength = 0;
+    BYTE ReOrdered[500]= {0};
+    bool bReordered = false;
+
+    if(nSectorLength[0] < _ONE_TRAMSMIT_LIMIT)
+    {
+        memcpy(Command, ucPreCommand, nSectorLength[0]);
+        ucIndex = nSectorLength[0];
+        nSectorLength[0] = 0;
+        nPointer[0] += ucIndex;
+	    ucTransLen = ucIndex;
+    }
+    else
+    {
+        while(ucTransLen < _ONE_TRAMSMIT_LIMIT)
+        {
+            uclength = ucPreCommand[ucIndex];
+
+            if(uclength <= 2)
+            {
+                ShowMessage("Wrong Length!");
+                break;
+            }
+
+            if((ucIndex + uclength > _ONE_TRAMSMIT_LIMIT))
+            {
+                if((_ONE_TRAMSMIT_LIMIT - ucIndex) <= 10)
+                {
+                    break;
+                }
+                else
+                {
+                    memset(ReOrdered, 0, 500);
+                    BYTE ucLen = _ONE_TRAMSMIT_LIMIT - ucIndex;
+                    BYTE ucID = ucPreCommand[ucIndex + 1];
+                    ReOrdered[0] = ucLen;
+                    ReOrdered[1] = ucID;
+                    memcpy(ReOrdered + 2, ucPreCommand + ucIndex + uclength - (ucLen - 2), ucLen - 2);
+                    ReOrdered[ucLen] = uclength - (ucLen - 2);
+                    ReOrdered[ucLen + 1] = ucID;
+                    memcpy(ReOrdered + ucLen + 2, ucPreCommand + ucIndex + 2, uclength - ucLen);
+
+                    if(ucIndex > 2)
+                    {
+                        memcpy(ucPreCommand + ucIndex - 2, ReOrdered, uclength + 2);
+                        ucIndex -= 2;
+                        bReordered = true;
+                        continue;
+                    }
+                    else
+                    {
+                        memcpy(Command + ucTransLen, ReOrdered, ReOrdered[0]);
+                        ucTransLen += ReOrdered[0];
+                        ucIndex += ReOrdered[0] - 2;
+                        memcpy(ucPreCommand + ucIndex, ReOrdered + ucLen, ReOrdered[ucLen]);
+                        nSectorLength[0] = nSectorLength[0] - (ReOrdered[0] - 2);  //
+                        break;
+                    }
+
+                }
+            }
+            else
+            {
+                memcpy(Command + ucTransLen, ucPreCommand + ucIndex, uclength);
+                ucTransLen += uclength;
+                ucIndex += uclength;
+                nSectorLength[0] = nSectorLength[0] - uclength;
+
+                if(bReordered)
+                {
+                    nSectorLength[0] += 2;
+                    bReordered = false;
+                }
+            }
+        }
+        nPointer[0] += ucIndex;
+    }
+    return ucTransLen;
+}
+
+bool SetColorDomain(BYTE ucColorSpace)
+{
+	BYTE Command[10];
+	BYTE ucLength = 0;
+	BYTE ReceData[16];
+
+	Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xDD;
+	Command[3] = ucColorSpace;
+	Command[4] = CalculateCheckSum(4, Command);
+	ucLength = 5;
+
+  	if(SendAndCheck(ucLength, Command, ReceData))
+	{
+		return true;
+	}
+	else
+	{
+		ShowMessage("Communication Error!");
+		return false;
+	}
+
+}
+
+//---------------------------------------------------------------------------
+
+bool SetGamma(BYTE ucGammaNum, BYTE ucCTNum)
+{
+	BYTE Command[10];
+	BYTE ucLength = 0;
+	BYTE ReceData[16];
+
+	Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xCC;
+	Command[3] = (ucGammaNum<<4)|ucCTNum;
+	Command[4] = CalculateCheckSum(4, Command);
+	ucLength = 5;
+
+  	if(SendAndCheck(ucLength, Command, ReceData))
+	{
+		return true;
+	}
+	else
+	{
+		ShowMessage("Communication Error!");
+		return false;
+	}
+}
+
+bool SetDICOM(void)
+{
+	BYTE Command[10];
+	BYTE ucLength = 0;
+	BYTE ReceData[16];
+
+	Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xEE;
+	Command[3] = CalculateCheckSum(3, Command);
+	ucLength = 4;
+
+  	if(SendAndCheck(ucLength, Command, ReceData))
+	{
+		return true;
+	}
+	else
+	{
+		ShowMessage("Communication Error!");
+		return false;
+	}
+}
+
+bool SetFreesyncII(BYTE ucEOTFNum)
+{
+	BYTE Command[10];
+	BYTE ucLength = 0;
+	BYTE ReceData[16];
+
+	Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xDE;
+	Command[3] = ucEOTFNum;
+	Command[4] = CalculateCheckSum(4, Command);
+	ucLength = 5;
+
+  	if(SendAndCheck(ucLength, Command, ReceData))
+	{
+		return true;
+	}
+	else
+	{
+		ShowMessage("Communication Error!");
+		return false;
+	}
+}
+
+bool OCCSendCommandandMeasure(COLOR_INPUT_STRUCT *sRGBVerify, int *OCCPattern, int nPatternLength)
+{
+	BYTE Command[10];
+	int i = 0;
+	BYTE ucLength = 4;
+	CA210DATASTRUCT MeaData;
+	BYTE ucPanelBitNum = frmDemo->combPanelBitNum->ItemIndex > 0? 10 : 8;
+
+
+    Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xBB;
+
+    for(i = 0; i < nPatternLength; i++)
+    {
+		int R = OCCPattern[3*i+0]*4;
+        int G = OCCPattern[3*i+1]*4;
+        int B = OCCPattern[3*i+2]*4;
+
+        if(ucPanelBitNum == 10)
+        {
+            if(OCCPattern[3*i+0] == 255)
+            {
+                R = 1023;
+            }
+
+            if(OCCPattern[3*i+1] == 255)
+            {
+                G = 1023;
+            }
+
+            if(OCCPattern[3*i+2] == 255)
+            {
+                B = 1023;
+            }
+        }
+
+    	Command[3] = R >> 8;
+    	Command[4] = R & 0xFF;
+    	Command[5] = G >> 8;
+    	Command[6] = G & 0xFF;
+    	Command[7] = B >> 8;
+    	Command[8] = B & 0xFF;
+    	Command[9] = CalculateCheckSum(9, Command);
+    	ucLength = 10;
+
+      	if(!SendCommand(ucLength, Command))
+        {
+            return false;
+        }
+
+    	Sleep(200);
+    	// -----------Measure & Calculate----------------------
+        MeaData = caMeasure();
+
+        sRGBVerify[i].R = R;
+        sRGBVerify[i].G = G;
+        sRGBVerify[i].B = B;
+        sRGBVerify[i].Lv = MeaData.fLv;
+        sRGBVerify[i].Sx = MeaData.fSx;
+        sRGBVerify[i].Sy = MeaData.fSy;
+        sRGBVerify[i].u = MeaData.fUd;
+        sRGBVerify[i].v = MeaData.fVd;
+        sRGBVerify[i].duv = MeaData.fDuv;
+
+	 	if(((R == 1020) && (G == 1020) && (B == 1020) && (ucPanelBitNum == 8))
+	 	    ||((R== 1023) && (G == 1023) && (B == 1023) && (ucPanelBitNum == 10)))
+        {
+        	g_rtdsRGBColorSetWhiteLv(MeaData.fLv);
+        }
+	}
+
+ 	Command[2] = _OCC_VERIFY_END;
+	Command[3] = CalculateCheckSum(3, Command);
+    ucLength = 4;
+
+	if(!SendCommand(ucLength, Command))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool OGCSendCommandandMeasure(COLOR_INPUT_STRUCT *Measure, int step, int number, BYTE ucMode)
+{
+	BYTE Command[10];
+	int nInterval = 200;
+	int i = 0;
+	BYTE ucLength = 4;
+	int index = 0;
+	BYTE ReceData[16] = {0};
+	WORD usGray;
+	WORD usR, usG, usB;
+
+	CA210DATASTRUCT CA210Data;
+
+    Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+    Command[2] = 0xBB;
+
+    bool bBreak = false;
+
+	for(i = 0; i <= 256; )
+    {
+    	if(i == 256)
+        {
+    		i = 255;
+            bBreak = true;
+        }
+
+        if(frmDemo->combPanelBitNum->ItemIndex == 0) // 8 bit panel
+        {
+			usGray= i *4; // Hung test
+        }
+		else
+		{
+			// usGray = (i == 255) ? 1023: (i *4); // Hung test
+			usGray = (i *4) *1023/1020; // Hung test
+		}
+
+		switch(ucMode)
+		{
+            case _R:
+                usR = usGray;
+                usG = 0;
+                usB = 0;
+                break;
+
+            case _G:
+                usR = 0;
+                usG = usGray;
+                usB = 0;
+                break;
+
+            case _B:
+                usR = 0;
+                usG = 0;
+                usB = usGray;
+                break;
+
+            case _GRAY:
+                usR = usGray;
+                usG = usGray;
+                usB = usGray;
+                break;
+
+            default:
+                break;
+		}
+
+    	Command[3] = usR>>8;
+    	Command[4] = usR& 0xFF;
+    	Command[5] = usG>>8;
+    	Command[6] = usG & 0xFF;
+    	Command[7] = usB>>8;
+    	Command[8] = usB & 0xFF;
+    	Command[9] = CalculateCheckSum(9, Command);
+    	ucLength = 10;
+
+      	if(SendAndCheck(ucLength, Command, ReceData))
+    	{
+    		i += step;
+    	}
+    	else
+    	{
+			ShowMessage("Communication Error!");
+			return false;
+    	}
+
+    	Sleep(nInterval);
+
+		CA210Data = caMeasure();
+
+        if(index > 255)
+        {
+            break;
+        }
+
+		Measure[index].R = usR;
+		Measure[index].G = usG;
+		Measure[index].B = usB;
+        Measure[index].Lv = CA210Data.fLv;
+        Measure[index].Sx = CA210Data.fSx;
+        Measure[index].Sy = CA210Data.fSy;
+        Measure[index].lT = CA210Data.lT;
+        Measure[index].u  = 4 * Measure[index].Sx / (3 + 12 * Measure[index].Sy - 2 * Measure[index].Sx);//CA210Data.fUd;//
+        Measure[index].v  = 9 * Measure[index].Sy / (3 + 12 * Measure[index].Sy - 2 * Measure[index].Sx);//CA210Data.fVd;//
+        Measure[index].duv = CA210Data.fDuv;
+
+        index++;
+    }
+
+    if(number < 256)
+    {
+	    g_rtdsRGBColorSetWhiteLv(Measure[number].Lv);
+    }
+    else
+    {
+        g_rtdsRGBColorSetWhiteLv(Measure[255].Lv);
+    }
+
+    Command[2] = _OGC_VERIFY_END;
+    Command[3] = CalculateCheckSum(3, Command);
+    ucLength = 4;
+
+    if(!SendAndCheck(ucLength, Command, ReceData))
+    {
+        ShowMessage("Communication Error!");
+        return false;
+    }
+
+    return true;
+}
+
+bool HDRSendCommandandMeasure(COLOR_INPUT_STRUCT *Measure, int *HDRPattern)
+{
+	BYTE Command[10];
+	int i = 0;
+	BYTE ucLength = 4;
+	CA210DATASTRUCT MeaData;
+	BYTE ucPanelBitNum = frmDemo->combPanelBitNum->ItemIndex > 0? 10 : 8;
+
+
+    Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+	Command[2] = 0xBB;
+
+    for(i = 0; i < 18; i++)
+    {
+		int R = HDRPattern[3*i+0];
+        int G = HDRPattern[3*i+1];
+        int B = HDRPattern[3*i+2];
+
+    	Command[3] = R >> 8;
+    	Command[4] = R & 0xFF;
+    	Command[5] = G >> 8;
+    	Command[6] = G & 0xFF;
+    	Command[7] = B >> 8;
+    	Command[8] = B & 0xFF;
+    	Command[9] = CalculateCheckSum(9, Command);
+    	ucLength = 10;
+
+      	if(!SendCommand(ucLength, Command))
+        {
+            return false;
+        }
+
+    	Sleep(200);
+    	// -----------Measure & Calculate----------------------
+        MeaData = caMeasure();
+
+        Measure[i].R = R;
+        Measure[i].G = G;
+        Measure[i].B = B;
+        Measure[i].Lv = MeaData.fLv;
+        Measure[i].Sx = MeaData.fSx;
+        Measure[i].Sy = MeaData.fSy;
+        Measure[i].u  = 4 * Measure[i].Sx / (3 + 12 * Measure[i].Sy - 2 * Measure[i].Sx);//CA210Data.fUd;//
+        Measure[i].v  = 9 * Measure[i].Sy / (3 + 12 * Measure[i].Sy - 2 * Measure[i].Sx);//CA210Data.fVd;//
+        Measure[i].duv = MeaData.fDuv;
+
+	}
+
+ 	Command[2] = _OCC_VERIFY_END;
+	Command[3] = CalculateCheckSum(3, Command);
+        ucLength = 4;
+
+	if(!SendCommand(ucLength, Command))
+    {
+        return false;
+    }
+
+    return true;
+
+}
+
+String GetTimeString(void)
+{
+    String strTime = DateTimeToStr(Now());
+    strTime = strTime.SubString(1, strTime.Pos(":") - 1);
+    char *pchTime = strTime.c_str();
+
+    for(int i = 0; i < strTime.Length(); i++)
+    {
+        if(pchTime[i] == '/')
+        {
+           pchTime[i] = '-';
+        }
+    }
+
+    strTime = String(pchTime);
+    return strTime;
+}
+
+bool __fastcall TfrmDemo::CheckFW(void)
+{
+    BYTE Command[5] = {0x03, HextoInt(edtCommand->Text.c_str(), 2), 0xFF, 0, 0};
+    BYTE ReceData[10] = {0};
+    BYTE ucFlag = 0;
+    int nIsWrite = 0xFF;
+    int nIsRead = 0xFF;
+    int count = 0;
+    int FTDIdelayTime = StrToInt(frmDemo->edtFTDIdelay->Text);
+
+    Command[3] = CalculateCheckSum(3, Command);
+
+    nIsWrite = g_rtdOGCWriteDDCCI(4, Command, IICDelay, byPolling, IICSpeed) ;
+
+    if(frmDemo->USBType->ItemIndex)
+    {
+      Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+    }
+
+    if(nIsWrite != _ERROR_SUCCESS)
+	{
+        ShowMessage("Communication Error!");
+        return false;
+	}
+
+	nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 7, ReceData, IICDelay, IICSpeed, byPolling);
+	if(nIsRead != _ERROR_SUCCESS)
+	{
+        count = 0;
+        while(nIsRead!= _ERROR_SUCCESS)
+        {
+        	Sleep(50);
+
+            if(frmDemo->USBType->ItemIndex)
+            {
+              Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+            }
+
+            nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 7, ReceData, IICDelay, IICSpeed, byPolling);
+            count++;
+
+            if(count == 20)
+            {
+                ShowMessage("Communication Error!");
+                return false;
+            }
+
+        }
+	}
+
+    chkbOGCOn->Checked = (ReceData[2]&0x01);
+    chkbOCCOn->Checked = (ReceData[2]&0x02);
+    chkbDICOMOn->Checked = (ReceData[2]&0x4);
+    chkbHDROn->Checked = (ReceData[2]&0x10);
+	chkbDICOMHDRIndependent->Checked = (ReceData[2]&0x20);
+    //chkbRGBGammaOn->Checked = ReceData[2] & 0x08;
+    ChLocalDimming->Checked = (ReceData[2]&0x40);
+	chkbFreesync2On->Checked = (ReceData[2]&0x80);
+
+    if(!chkbOGCOn->Checked)
+    {
+        chkbOGCEnable->Checked = false;
+        chkbOGCEnable->Enabled = false;
+    }
+    else
+    {
+    	chkbOGCEnable->Checked = true;
+        chkbOGCEnable->Enabled = true;
+    }
+
+    if(!chkbOCCOn->Checked)
+    {
+        chkbOCCEnable->Checked = false;
+        chkbOCCEnable->Enabled = false;
+    }
+    else
+    {
+    	chkbOCCEnable->Checked = true;
+        chkbOCCEnable->Enabled = true;
+    }
+
+    /******* Hung *******/
+    if(!chkbDICOMOn->Checked)
+    {
+        chkbDICOMEnable->Checked = false;
+        chkbDICOMEnable->Enabled = false;
+    }
+    else
+    {
+    	chkbDICOMEnable->Checked = true;
+        chkbDICOMEnable->Enabled = true;
+    }
+	/******* Hung *******/
+
+    if(chkbHDROn->Checked)
+    {
+        chkbLock6500K->Checked = true;
+        chkbLock6500K->Enabled = false;
+    }
+
+    BYTE ucGammaNum = ReceData[3] & 0x07; // 20170123 Hung modify for 540nits tone mapping
+
+    ucHDRIGVersion = (ReceData[3]>>3) & 0x1F; // 20170209 Hung modify for FW IG Version
+
+    if(ucHDRIGVersion == 0) // 20170123 Hung modify for 540 nits tone mapping
+	{
+		ucHDRIGNum = 6; // for FW Compatibility
+	}
+	else if((ucHDRIGVersion == 1)||(ucHDRIGVersion == 2))
+	{
+		ucHDRIGNum = 8; // 20170209 Hung modify for FW IG Version
+	}
+	else if(ucHDRIGVersion >= 3)
+	{
+		ucHDRIGNum = 12; // 20171103 Justin modify for Display HDR
+	}
+
+    BYTE ucCTNum = ReceData[4];
+
+    if((ucGammaNum <= 5)&&(ucGammaNum >= 1))  // TOTAL GAMMA = 1~5
+    {
+        combGammaNum->ItemIndex = ucGammaNum - 1;
+        combGammaNumChange(this);
+    }
+    else
+    {
+        ucFlag |= 4;
+    }
+
+    if((ucCTNum <= 6)&&(ucCTNum >= 1))  // TOTAL CT = 1~6
+    {
+        combCTNum->ItemIndex = ucCTNum - 1;
+        combCTNumChange(this);
+    }
+    else
+    {
+        ucFlag |= 8;
+    }
+
+    if((ReceData[5]>>4) == _LVDS_DISP_24_BIT)
+    {
+        combPanelBitNum->ItemIndex = 0;
+    }
+    else if((ReceData[5]>>4) == _LVDS_DISP_30_BIT)
+    {
+        combPanelBitNum->ItemIndex = 1;
+    }
+    else
+    {
+        ShowMessage("Panel should be 8bit/10bit!");
+    }
+
+    chkbLUTMode->Checked = ReceData[5] & 0x01;
+
+	if(ucHDRIGVersion >= 3)
+	{
+		if(chkbHDROn->Checked)
+		{
+			CheckPanelLvInfo();
+		}
+		CheckFWVersion();
+	}
+	else
+	{
+		edtMaxCLL->Text = 0;
+		edtMaxFALL->Text = 0;
+		edtMinCLL->Text = 0;
+	}
+
+    if(ucFlag != 0)
+    {
+        String str = "";
+
+        if((ucFlag & 0x01) != 0)
+        {
+            str += "FW should set OGC ON!\n";
+        }
+        if((ucFlag & 0x02) != 0)
+        {
+            str += "FW should set OCC ON!\n";
+        }
+        if((ucFlag & 0x04) != 0)
+        {
+            str += "FW should set Gamma Number to 1~5!\n";
+        }
+        if((ucFlag & 0x08) != 0)
+        {
+            str += "FW should set CT Number to 1~6!";
+        }
+        ShowMessage(str.c_str());
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+bool __fastcall TfrmDemo::CheckPanelLvInfo(void)
+{
+    BYTE Command[5] = {0x03, HextoInt(edtCommand->Text.c_str(), 2), 0, 0, 0};
+    BYTE ReceData[10] = {0};
+    BYTE ucFlag = 0;
+    int nIsWrite = 0xFF;
+    int nIsRead = 0xFF;
+    int count = 0;
+    int FTDIdelayTime = StrToInt(frmDemo->edtFTDIdelay->Text);
+
+	Command[2] = 0xAD;
+	Command[3] = 0x02;
+    Command[4] = CalculateCheckSum(4, Command);
+
+    nIsWrite = g_rtdOGCWriteDDCCI(5, Command, IICDelay, byPolling, IICSpeed) ;
+
+    if(frmDemo->USBType->ItemIndex)
+    {
+      Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+    }
+
+    if(nIsWrite != _ERROR_SUCCESS)
+	{
+        ShowMessage("Communication Error!");
+        return false;
+	}
+
+	nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 6, ReceData, IICDelay, IICSpeed, byPolling);
+	if(nIsRead != _ERROR_SUCCESS)
+	{
+        count = 0;
+        while(nIsRead!= _ERROR_SUCCESS)
+        {
+        	Sleep(50);
+
+            if(frmDemo->USBType->ItemIndex)
+            {
+              Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+            }
+
+            nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 6, ReceData, IICDelay, IICSpeed, byPolling);
+            count++;
+
+            if(count == 20)
+            {
+                ShowMessage("Communication Error!");
+                return false;
+            }
+
+        }
+	}
+
+	MaxCLL_CV = ReceData[2];
+	fMaxCLL = 50 * pow(2,((float)ReceData[2])/32);
+	fMaxFALL = 50 * pow(2,((float)ReceData[3])/32);
+	fMinCLL = fMaxCLL * pow(((float)ReceData[4])/255,2)/100;
+	if(chkHDRCVFromFW->Checked)
+	{
+		edtCV->Text = IntToHex(MaxCLL_CV, 2);
+		edtLv->Text = fMaxCLL;
+	}
+	edtMaxCLL->Text = fMaxCLL;
+	edtMaxFALL->Text = fMaxFALL;
+	edtMinCLL->Text = fMinCLL;
+}
+
+bool __fastcall TfrmDemo::CheckFWVersion(void)
+{
+    BYTE Command[5] = {0x03, HextoInt(edtCommand->Text.c_str(), 2), 0, 0, 0};
+    BYTE ReceData[10] = {0};
+    BYTE ucFlag = 0;
+    int nIsWrite = 0xFF;
+    int nIsRead = 0xFF;
+    int count = 0;
+    int FTDIdelayTime = StrToInt(frmDemo->edtFTDIdelay->Text);
+
+    Command[2] = 0xAD;
+	Command[3] = 0x01;
+    Command[4] = CalculateCheckSum(4, Command);
+
+    nIsWrite = g_rtdOGCWriteDDCCI(5, Command, IICDelay, byPolling, IICSpeed) ;
+
+    if(frmDemo->USBType->ItemIndex)
+    {
+      Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+    }
+
+    if(nIsWrite != _ERROR_SUCCESS)
+	{
+        ShowMessage("Communication Error!");
+	}
+
+	nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 5, ReceData, IICDelay, IICSpeed, byPolling);
+	if(nIsRead != _ERROR_SUCCESS)
+	{
+        count = 0;
+        while(nIsRead!= _ERROR_SUCCESS)
+        {
+        	Sleep(50);
+
+            if(frmDemo->USBType->ItemIndex)
+            {
+              Sleep((FTDIdelayTime < 20) ? 20 : FTDIdelayTime);
+            }
+
+            nIsRead = g_rtdReadDDCCI(ucSlave, ucSub, 5, ReceData, IICDelay, IICSpeed, byPolling);
+            count++;
+
+            if(count == 20)
+            {
+                ShowMessage("Communication Error!");
+            }
+
+        }
+	}
+
+    ucFWVersion = ((ReceData[2]<<8) | ReceData[3]);
+	edtFWVersion->Text = IntToHex(ucFWVersion , 4).c_str();
+	if(ucFWVersion < 2)
+	{
+		if(ColorSpace->ItemIndex == 7)
+			ColorSpace->ItemIndex = 0;
+	}
+    if(ucFWVersion <= 2)
+    {
+        chkHDRCVFromFW->Checked = false;
+    }
+}
+
+void TfrmDemo::Initial(void)
+{
+    BYTE ucGammaNum = combGammaNum->ItemIndex + 1;
+    BYTE ucCTNum = combCTNum->ItemIndex + 1;
+    BYTE ucID = (frmDemo->chkbFreesync2On->Checked << 7) | (frmDemo->ChLocalDimming->Checked << 6) | ((ucGammaNum & 0x07) << 3) | (frmDemo->chkbDICOMOn->Checked << 2)
+                |(frmDemo->chkbOCCOn->Checked << 1) | (frmDemo->chkbOGCOn->Checked << 0);// Gamma Num = 2, OGC // bit7:3: ucGammaNum, bit2: DICOM, bit1 OCC, bit0 OGC
+
+    g_rtdGammaClearPara();
+
+    float fTxy[12] = {0};
+
+    if(combPanelBitNum->ItemIndex == 0)
+    {
+        g_rtdGammaSetPanelBitNum(8); // 8bit Panel
+    }
+    else
+    {
+        g_rtdGammaSetPanelBitNum(10); // 10bit Panel
+    }
+
+    if(g_rtdGammaGetPanelBitNum() == 8)
+    {
+        nPattern[16] = 1020;
+    }
+
+    g_rtdGammaSetGrayPattern(nPattern, 17);
+
+    /*if((!frmDemo->chkbOGCEnable->Checked)||(!frmDemo->chkbOGCOn->Checked))
+    {
+        ucGammaNum = 1;
+    }*/
+
+    g_rtdGammaSetGammaNum(ucGammaNum);
+
+    for(BYTE i = 1; i <= ucGammaNum; i++)
+    {
+        TComboBox *combGammaNo;
+
+        if(this->FindComponent("combGammaNo" + IntToStr(i)))
+        {
+            combGammaNo = dynamic_cast<TComboBox*>(this->FindComponent("combGammaNo" + IntToStr(i)));
+        }
+
+        g_rtdGammaSetGammaIndex(i - 1, StrToFloat(combGammaNo->Text));
+
+    }
+
+    for(BYTE i = 0; i < ucCTNum; i++)
+    {
+        TComboBox *combCT;
+
+        if(this->FindComponent("combCT" + IntToStr(i + 1)))
+        {
+            combCT = dynamic_cast<TComboBox*>(this->FindComponent("combCT" + IntToStr(i + 1)));
+        }
+
+        int nIndex = combCT->ItemIndex > 0? combCT->ItemIndex : 0;
+        fTxy[2*i] = Txy[nIndex][0];
+        fTxy[2*i + 1] = Txy[nIndex][1];
+    }
+
+    g_rtdGammaSetCTNum(ucCTNum);
+    g_rtdGammaSetTxy(fTxy, ucCTNum);
+    float xy = 0;
+    for(BYTE i = 0; i < 12; i++)
+        xy = g_rtdGammaGetTxy(i/2, i%2);
+
+    g_rtdGammaSetLockEnd(true);
+    g_rtdGammaSetLUTCompensate(true);
+    g_rtdGammaSetIDNum(ucID);
+
+    float fRGBxy[8] = {0};
+    fRGBxy[0] = StrToFloat(edtRx->Text);
+    fRGBxy[1] = StrToFloat(edtRy->Text);
+    fRGBxy[2] = StrToFloat(edtGx->Text);
+    fRGBxy[3] = StrToFloat(edtGy->Text);
+    fRGBxy[4] = StrToFloat(edtBx->Text);
+    fRGBxy[5] = StrToFloat(edtBy->Text);
+    fRGBxy[6] = StrToFloat(edtWx->Text);
+    fRGBxy[7] = StrToFloat(edtWy->Text);
+    g_rtdColormapSetUserDefineGamut(fRGBxy, 0);
+    fRGBxy[0] = StrToFloat(edtRx2->Text);
+    fRGBxy[1] = StrToFloat(edtRy2->Text);
+    fRGBxy[2] = StrToFloat(edtGx2->Text);
+    fRGBxy[3] = StrToFloat(edtGy2->Text);
+    fRGBxy[4] = StrToFloat(edtBx2->Text);
+    fRGBxy[5] = StrToFloat(edtBy2->Text);
+    fRGBxy[6] = StrToFloat(edtWx2->Text);
+    fRGBxy[7] = StrToFloat(edtWy2->Text);
+	g_rtdColormapSetUserDefineGamut(fRGBxy, 1);
+
+    // DICOM Initial
+
+    /*****Hung******/
+    float fDICOMxy[2] = {StrToFloat(edtDICOMX->Text.c_str()), StrToFloat(edtDICOMY->Text.c_str())};
+    float fDICOMMaxLv = StrToFloat(edtMaxLv->Text.c_str());
+    float fDICOMAmbientLight = StrToFloat(edtAmbientLight->Text.c_str());
+
+    g_rtdDICOMSetDICOMMode(rgDICOMMode->ItemIndex);
+    g_rtdDICOMSetDICOMxy(chkbDICOMLockCT->Checked, fDICOMxy);
+    g_rtdDICOMSetDICOMLimitLv(chkbLimitLv->Checked, fDICOMMaxLv);
+    g_rtdDICOMSetDICOMAL(fDICOMAmbientLight);
+    /*****Hung******/
+
+    BYTE ucColorSpace = ColorSpace->ItemIndex < 0 ? 0 : ColorSpace->ItemIndex;
+
+    if(ucColorSpace >= 4)
+    {
+        ucColorSpace++;
+    }
+    g_rtdColormapSetColorSpace(ucColorSpace);   // Set final show Color Space: 0-sRGB, 1-AdobeRGB
+
+    if(chkbHDROn->Checked)
+    {
+        //InitialHDRParam(&strHDR);
+        chkbLock6500K->Checked = true;
+        chkbLUTMode->Checked = false;
+        g_rtdGammaSetOCCLockCT(1);   // Set OCC Lock 6500K
+    }
+    else
+    {
+    	if(chkbFreesync2On->Checked)
+    	{
+	        chkbLock6500K->Checked = false;
+	        chkbLUTMode->Checked = false;
+	        g_rtdGammaSetOCCLockCT(0);   // Set OCC Lock 6500K
+		}
+		else
+		{
+	        g_rtdGammaSetOCCLockCT(chkbLock6500K->Checked);   // Set OCC Lock 6500K
+		}
+    }
+
+	g_rtdGammaSetNoInterpolationMode(false);
+
+	//BYTE ucEOTF = (frmDemo->CheckBox5->Checked << 4) | (frmDemo->CheckBox4->Checked << 3) | (frmDemo->CheckBox3->Checked << 2) |
+	//	(frmDemo->CheckBox2->Checked << 1) | (frmDemo->CheckBox1->Checked << 0);
+	g_rtdGammaSetEOTF(0x1F);
+
+    if(chkbUseVisualFlash->Checked)
+    {
+        BYTE ucCnt = 0;
+#if(_OGC_SUPPORT == _ON)
+        for(ucCnt = 0; ucCnt < _OGC_TOTAL_GAMMA; ucCnt++)
+        {
+            g_pusGammaCount[ucCnt][0] = 2052;
+            g_pusGammaCount[ucCnt][1] = 2052;
+            g_pusGammaCount[ucCnt][2] = 2052;
+        }
+#endif  // End of #if(_OGC_SUPPORT == _ON)
+
+#if(_OCC_SUPPORT == _ON)
+        g_pusGammaCount[ucCnt][0] = 2200;
+        g_pusGammaCount[ucCnt][1] = 2200;
+        g_pusGammaCount[ucCnt][2] = 2200;
+        ucCnt++;
+#endif  // End of #if(_OCC_SUPPORT == _ON)
+
+#if(_OGC_DICOM_SUPPORT == _ON)
+        g_pusGammaCount[ucCnt][0] = 2052;
+        g_pusGammaCount[ucCnt][1] = 2052;
+        g_pusGammaCount[ucCnt][2] = 2052;
+        ucCnt++;
+#endif  // End of #if(_OGC_DICOM_SUPPORT == _ON)
+
+#if((_OGC_SUPPORT == _ON)&&(_RGB_GAMMA_FUNCTION == _ON))
+        for(; ucCnt < _OGC_TOTAL_GAMMA; ucCnt++)
+        {
+            g_pusGammaCount[ucCnt][0] = 2052;
+            g_pusGammaCount[ucCnt][1] = 2052;
+            g_pusGammaCount[ucCnt][2] = 2052;
+        }
+#endif  // End of #if(_OGC_SUPPORT == _ON)
+    }
+
+
+
+}
+
+void __fastcall TfrmDemo::SaveConfig(void)
+{
+    ofstream fout("Config.dat");
+
+    fout<<StrToInt(edtChannelNum->Text.c_str())<<endl;
+    fout<<HextoInt(edtCommand->Text.c_str(),2)<<endl;
+    fout<<StrToInt(edtWaitTime->Text.c_str())<<endl;
+    fout<<rgActionMode->ItemIndex<<endl;
+    fout<<combPanelBitNum->ItemIndex<<endl;
+
+    if(lblModuleName->Caption != "")
+    {
+        fout<<lblModuleName->Caption.c_str()<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtSN->Text != "")
+    {
+        fout<<edtSN->Text.c_str()<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtTester->Text != "")
+    {
+        fout<<edtTester->Text.c_str()<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    // fout<<chkbOGCEnable->Checked<<endl; // Hung
+
+    fout<<combGammaNum->ItemIndex<<endl;
+    fout<<combGammaNo1->ItemIndex<<endl;
+    fout<<combGammaNo2->ItemIndex<<endl;
+    fout<<combGammaNo3->ItemIndex<<endl;
+    fout<<combGammaNo4->ItemIndex<<endl;
+    fout<<combGammaNo5->ItemIndex<<endl;
+
+    fout<<combCTNum->ItemIndex<<endl;
+    fout<<combCT1->ItemIndex<<endl;
+    fout<<combCT2->ItemIndex<<endl;
+    fout<<combCT3->ItemIndex<<endl;
+    fout<<combCT4->ItemIndex<<endl;
+    fout<<combCT5->ItemIndex<<endl;
+    fout<<combCT6->ItemIndex<<endl;
+    fout<<combFinalGamma->ItemIndex<<endl;
+    fout<<combFinalCT->ItemIndex<<endl;
+    fout<<rgVerifyStepOGC->ItemIndex<<endl;
+
+    // fout<<chkbOCCEnable->Checked<<endl; // Hung
+    fout<<chkbLUTMode->Checked<<endl;
+    fout<<ColorSpace->ItemIndex<<endl;
+    fout<<rgOccVerifyPattern->ItemIndex<<endl;
+    fout<<rgOCCGammaVerify->ItemIndex<<endl;
+
+    if(edtRx->Text != "")
+    {
+        fout<<StrToFloat(edtRx->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtRy->Text != "")
+    {
+        fout<<StrToFloat(edtRy->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtGx->Text != "")
+    {
+        fout<<StrToFloat(edtGx->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtGy->Text != "")
+    {
+        fout<<StrToFloat(edtGy->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtBx->Text != "")
+    {
+        fout<<StrToFloat(edtBx->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtBy->Text != "")
+    {
+        fout<<StrToFloat(edtBy->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtWx->Text != "")
+    {
+        fout<<StrToFloat(edtWx->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtWy->Text != "")
+    {
+        fout<<StrToFloat(edtWy->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    fout<<chkbsRGB->Checked<<endl;
+    fout<<chkbAdobeRGB->Checked<<endl;
+    fout<<chkbUserDefine->Checked<<endl;
+    fout<<chkbSoftProof->Checked<<endl;
+    fout<<chkbEBU->Checked<<endl;
+    fout<<chkbRec709->Checked<<endl;
+    fout<<chkbDCIP3->Checked<<endl;
+	fout<<chkbSMPTEC->Checked<<endl;
+	fout<<chkbUserDefine->Checked<<endl;
+
+
+
+
+	fout<<rgDICOMMode->ItemIndex<<endl; // Hung DICOM mode
+
+    fout<<chkbDICOMLockCT->Checked<<endl; // Hung DICOM Lock CT
+
+    if(edtDICOMX->Text != "")
+    {
+        fout<<StrToFloat(edtDICOMX->Text)<<endl; // Hung DICOM Lock CCT x
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtDICOMY->Text != "")
+    {
+        fout<<StrToFloat(edtDICOMY->Text)<<endl; // Hung DICOM Lock CCT y
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    fout<<chkbLimitLv->Checked<<endl; // Hung DICOM Limited Lv
+
+    if(edtMaxLv->Text != "")
+    {
+        fout<<StrToFloat(edtMaxLv->Text)<<endl; // Hung DICOM Limited Lv
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtAmbientLight->Text != "")
+    {
+        fout<<StrToFloat(edtAmbientLight->Text)<<endl; // Hung DICOM Ambient Light
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    fout<<rgDICOMVerifyStep->ItemIndex<<endl; // Hung DICOM Verify Points
+    fout<<rgCalibPattern->ItemIndex<<endl;
+    fout<<chkbVerifyRGBGamma->Checked<<endl;
+    fout<<chkbLock6500K->Checked<<endl;
+    fout<<chkbSendEndCommand->Checked<<endl;
+
+	fout<<chkbMinLvMode->Checked<<endl;
+	if(edtxRange->Text != "")
+    {
+        fout<<StrToFloat(edtxRange->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtyRange->Text != "")
+    {
+        fout<<StrToFloat(edtyRange->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv1->Text != "")
+    {
+        fout<<StrToFloat(edtLv1->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv2->Text != "")
+    {
+        fout<<StrToFloat(edtLv2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv3->Text != "")
+    {
+        fout<<StrToFloat(edtLv3->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv4->Text != "")
+    {
+        fout<<StrToFloat(edtLv4->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv5->Text != "")
+    {
+        fout<<StrToFloat(edtLv5->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+	if(edtLv6->Text != "")
+    {
+        fout<<StrToFloat(edtLv6->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    fout<<USBType->ItemIndex<<endl; // USB Type
+    fout<<StrToInt(edtFTDIdelay->Text.c_str())<<endl; // FTDI delay time
+    fout<<chkbSetHDRMode->Checked<<endl;
+    fout<<chkHDRVerify->Checked<<endl;
+	fout<<chkHDRsRGBpanel->Checked<<endl; // Hung 20170224 modify for HDR sRGB panel
+	fout<<chkHDRCVFromFW->Checked<<endl; // Hung 20171123 modify for HDR DisplayHDR
+    fout<<CheckBox1->Checked<<endl;
+	fout<<CheckBox2->Checked<<endl;
+	fout<<CheckBox3->Checked<<endl;
+	fout<<CheckBox4->Checked<<endl;
+	fout<<CheckBox5->Checked<<endl;
+
+	fout<<combFinalEOTF->ItemIndex<<endl;
+	fout<<chkbFreesyncIIVerify->Checked<<endl;
+	fout<<rgVerifyStepFreesyncII->ItemIndex<<endl;
+	fout<<chkbFixMeaData->Checked<<endl;
+
+	if(edtRx2->Text != "")
+    {
+        fout<<StrToFloat(edtRx2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtRy2->Text != "")
+    {
+        fout<<StrToFloat(edtRy2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtGx2->Text != "")
+    {
+        fout<<StrToFloat(edtGx2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtGy2->Text != "")
+    {
+        fout<<StrToFloat(edtGy2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtBx2->Text != "")
+    {
+        fout<<StrToFloat(edtBx2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtBy2->Text != "")
+    {
+        fout<<StrToFloat(edtBy2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtWx2->Text != "")
+    {
+        fout<<StrToFloat(edtWx2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+
+    if(edtWy2->Text != "")
+    {
+        fout<<StrToFloat(edtWy2->Text)<<endl;
+    }
+    else
+    {
+        fout<<"_"<<endl;
+    }
+    fout.close();
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::LoadConfig(void)
+{
+    ifstream fin("Config.dat");
+    int nTemp = 0;
+    //float fTemp = 0;
+    string str = "";
+    fin >> nTemp;
+    edtChannelNum->Text = nTemp;
+    fin >> nTemp;
+    edtCommand->Text = IntToHex(nTemp, 2);
+    fin >> nTemp;
+    edtWaitTime->Text = nTemp;
+    fin >> nTemp;
+    rgActionMode->ItemIndex = nTemp;
+    fin >> nTemp;
+    combPanelBitNum->ItemIndex = nTemp;
+    fin >> str;
+    lblModuleName->Caption = String(str.c_str());
+
+    if(str != "_")
+    {
+        lblModuleName->Caption = String(str.c_str());
+    }
+    else
+    {
+        lblModuleName->Caption = "";
+    }
+
+    fin >> str;
+    edtSN->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtSN->Text = String(str.c_str());
+    }
+    else
+    {
+        edtSN->Text = "";
+    }
+
+    fin >> str;
+    edtTester->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtTester->Text = String(str.c_str());
+    }
+    else
+    {
+        edtTester->Text = "";
+    }
+
+    // fin >> nTemp; // Hung
+    // chkbOGCEnable->Checked = nTemp; // Hung
+    fin >> nTemp;
+    combGammaNum->ItemIndex = nTemp;
+    fin >> nTemp;
+    combGammaNo1->ItemIndex = nTemp;
+    fin >> nTemp;
+    combGammaNo2->ItemIndex = nTemp;
+    fin >> nTemp;
+    combGammaNo3->ItemIndex = nTemp;
+    fin >> nTemp;
+    combGammaNo4->ItemIndex = nTemp;
+    fin >> nTemp;
+    combGammaNo5->ItemIndex = nTemp;
+
+
+    fin >> nTemp;
+    combCTNum->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT1->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT2->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT3->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT4->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT5->ItemIndex = nTemp;
+    fin >> nTemp;
+    combCT6->ItemIndex = nTemp;
+
+    fin >> nTemp;
+    combFinalGamma->ItemIndex = nTemp;
+    fin >> nTemp;
+    combFinalCT->ItemIndex = nTemp;
+    fin >> nTemp;
+    rgVerifyStepOGC->ItemIndex = nTemp;
+
+
+    // fin >> nTemp; // Hung
+    // chkbOCCEnable->Checked = nTemp; // Hung
+    fin >> nTemp;
+    chkbLUTMode->Checked = nTemp;
+    fin >> nTemp;
+    ColorSpace->ItemIndex = nTemp;
+    fin >> nTemp;
+    rgOccVerifyPattern->ItemIndex = nTemp;
+    fin >> nTemp;
+    rgOCCGammaVerify->ItemIndex = nTemp;
+    fin >> str;
+    if(str != "_")
+    {
+        edtRx->Text = String(str.c_str());
+    }
+    else
+    {
+        edtRx->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtRy->Text = String(str.c_str());
+    }
+    else
+    {
+        edtRy->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtGx->Text = String(str.c_str());
+    }
+    else
+    {
+        edtGx->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtGy->Text = String(str.c_str());
+    }
+    else
+    {
+        edtGy->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtBx->Text = String(str.c_str());
+    }
+    else
+    {
+        edtBx->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtBy->Text = String(str.c_str());
+    }
+    else
+    {
+        edtBy->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtWx->Text = String(str.c_str());
+    }
+    else
+    {
+        edtWx->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtWy->Text = String(str.c_str());
+    }
+    else
+    {
+        edtWy->Text = "";
+    }
+
+    fin >> nTemp;
+    chkbsRGB->Checked = nTemp;
+    fin >> nTemp;
+    chkbAdobeRGB->Checked = nTemp;
+    fin >> nTemp;
+    chkbUserDefine->Checked = nTemp;
+    fin >> nTemp;
+    chkbSoftProof->Checked = nTemp;
+    fin >> nTemp;
+    chkbEBU->Checked = nTemp;
+    fin >> nTemp;
+    chkbRec709->Checked = nTemp;
+    fin >> nTemp;
+    chkbDCIP3->Checked = nTemp;
+	fin >> nTemp;
+    chkbSMPTEC->Checked = nTemp;
+    fin >> nTemp;
+    chkbUserDefine2->Checked = nTemp;
+
+
+    fin >> nTemp;
+    rgDICOMMode->ItemIndex = nTemp; // Hung DICOM Mode
+
+    fin >> nTemp;
+    chkbDICOMLockCT->Checked = nTemp; // Hung DICOM Lock CT
+
+    fin >> str;
+    if(str != "_")
+    {
+        edtDICOMX->Text = String(str.c_str()); // Hung DICOM Lock CCT x
+    }
+    else
+    {
+        edtDICOMX->Text = "";
+    }
+
+    fin >> str;
+    if(str != "_")
+    {
+        edtDICOMY->Text = String(str.c_str()); // Hung DICOM Lock CCT y
+    }
+    else
+    {
+        edtDICOMY->Text = "";
+    }
+
+    fin >> nTemp;
+    chkbLimitLv->Checked = nTemp; // Hung DICOM Limited Lv
+
+    fin >> str;
+    if(str != "_")
+    {
+        edtMaxLv->Text = String(str.c_str()); // Hung DICOM Limited Lv
+    }
+    else
+    {
+        edtMaxLv->Text = "";
+    }
+
+    fin >> str;
+    if(str != "_")
+    {
+        edtAmbientLight->Text = String(str.c_str()); // Hung DICOM Ambient Light
+    }
+    else
+    {
+        edtAmbientLight->Text = "";
+    }
+
+    fin >> nTemp;
+    rgDICOMVerifyStep->ItemIndex = nTemp; // Hung DICOM Verify Points
+
+    fin >> nTemp;
+    rgCalibPattern->ItemIndex = nTemp;
+
+    fin >> nTemp;
+    chkbVerifyRGBGamma->Checked = nTemp;
+
+    fin >> nTemp;
+    chkbLock6500K->Checked = nTemp;
+    fin >> nTemp;
+    chkbSendEndCommand->Checked = nTemp;
+
+	fin >> nTemp;
+	chkbMinLvMode->Checked = nTemp;
+
+	fin >> str;
+    edtxRange->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtxRange->Text = String(str.c_str());
+    }
+    else
+    {
+        edtxRange->Text = "";
+    }
+
+	fin >> str;
+    edtyRange->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtyRange->Text = String(str.c_str());
+    }
+    else
+    {
+        edtyRange->Text = "";
+    }
+
+	fin >> str;
+    edtLv1->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv1->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv1->Text = "";
+    }
+
+	fin >> str;
+    edtLv2->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv2->Text = "";
+    }
+
+	fin >> str;
+    edtLv3->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv3->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv3->Text = "";
+    }
+
+	fin >> str;
+    edtLv4->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv4->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv4->Text = "";
+    }
+
+	fin >> str;
+    edtLv5->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv5->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv5->Text = "";
+    }
+
+	fin >> str;
+    edtLv6->Text = String(str.c_str());
+    if(str != "_")
+    {
+        edtLv6->Text = String(str.c_str());
+    }
+    else
+    {
+        edtLv6->Text = "";
+    }
+
+    fin >> nTemp;
+    USBType->ItemIndex = nTemp; // USB Type
+
+    fin >> nTemp;
+    edtFTDIdelay->Text = nTemp; // FTDI delay time
+
+    fin >> nTemp;
+    chkbSetHDRMode->Checked = nTemp;
+
+    fin >> nTemp;
+    chkHDRVerify->Checked = nTemp;
+
+	fin >> nTemp;
+    chkHDRsRGBpanel->Checked = nTemp; // Hung 20170224 modify for HDR sRGB panel
+
+	fin >> nTemp;
+    chkHDRCVFromFW->Checked = nTemp; // Hung 20171123 modify for HDR DisplayHDR
+
+	fin >> nTemp;
+    CheckBox1->Checked = nTemp;
+
+	fin >> nTemp;
+    CheckBox2->Checked = nTemp;
+
+	fin >> nTemp;
+    CheckBox3->Checked = nTemp;
+
+	fin >> nTemp;
+    CheckBox4->Checked = nTemp;
+
+	fin >> nTemp;
+    CheckBox5->Checked = nTemp;
+
+    fin >> nTemp;
+    combFinalEOTF->ItemIndex = nTemp;
+
+    fin >> nTemp;
+    chkbFreesyncIIVerify->Checked = nTemp;
+
+	fin >> nTemp;
+    rgVerifyStepFreesyncII->ItemIndex = nTemp;
+
+    fin >> nTemp;
+    chkbFixMeaData->Checked = nTemp;
+
+	fin >> str;
+    if(str != "_")
+    {
+        edtRx2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtRx2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtRy2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtRy2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtGx2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtGx2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtGy2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtGy2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtBx2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtBx2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtBy2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtBy2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtWx2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtWx2->Text = "";
+    }
+    fin >> str;
+    if(str != "_")
+    {
+        edtWy2->Text = String(str.c_str());
+    }
+    else
+    {
+        edtWy2->Text = "";
+    }
+    fin.close();
+}
+
+void __fastcall TfrmDemo::ReArrangeFinalGamma(void)
+{
+    TStringList* FinalList = new TStringList();
+    String strGammaIndex;
+    BYTE ucIndex = combFinalGamma->ItemIndex;
+
+    combFinalGamma->Clear();
+    FinalList->Clear();
+
+    FinalList->Add(combGammaNo1->Text);
+
+    if(combGammaNum->ItemIndex > 0)
+    {
+        FinalList->Add(combGammaNo2->Text);
+    }
+
+    if(combGammaNum->ItemIndex > 1)
+    {
+        FinalList->Add(combGammaNo3->Text);
+    }
+
+    if(combGammaNum->ItemIndex > 2)
+    {
+        FinalList->Add(combGammaNo4->Text);
+    }
+
+    if(combGammaNum->ItemIndex > 3)
+    {
+        FinalList->Add(combGammaNo5->Text);
+    }
+
+    combFinalGamma->Items->AddStrings(FinalList);
+
+    if(ucIndex >= combFinalGamma->Items->Count)
+    {
+        ucIndex = 0;
+    }
+    combFinalGamma->ItemIndex = ucIndex;
+
+    delete FinalList;
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::ReArrangeFinalCT(void)
+{
+    TStringList* FinalList = new TStringList();
+    String strCTIndex;
+    BYTE ucIndex = combFinalCT->ItemIndex;
+
+    combFinalCT->Clear();
+    FinalList->Clear();
+
+    FinalList->Add(combCT1->Text);
+    if(combCTNum->ItemIndex > 0)
+    {
+        FinalList->Add(combCT2->Text);
+    }
+    if(combCTNum->ItemIndex > 1)
+    {
+        FinalList->Add(combCT3->Text);
+    }
+    if(combCTNum->ItemIndex > 2)
+    {
+        FinalList->Add(combCT4->Text);
+    }
+    if(combCTNum->ItemIndex > 3)
+    {
+        FinalList->Add(combCT5->Text);
+    }
+    if(combCTNum->ItemIndex > 4)
+    {
+        FinalList->Add(combCT6->Text);
+    }
+
+    FinalList->Add("Native");
+
+    combFinalCT->Items->AddStrings(FinalList);
+    if(ucIndex >= combFinalCT->Items->Count)
+    {
+        ucIndex = 0;
+    }
+    combFinalCT->ItemIndex = ucIndex;
+
+    delete FinalList;
+}
+
+void __fastcall TfrmDemo::ShowConnectResult(bool bIsOK)
+{
+    if(bIsOK)
+    {
+        lblConnectResult->Font->Color = clGreen;
+        lblConnectResult->Caption = "Connect OK!";
+    }
+    else
+    {
+        lblConnectResult->Font->Color = clRed;
+        lblConnectResult->Caption = "Connect FAIL!";
+    }
+}
+
+void __fastcall TfrmDemo::ShowVerifyResult(bool bIsOK)
+{
+    lblVerifyResult->Visible = true;
+
+    if(bIsOK)
+    {
+        lblVerifyResult->Font->Color = clGreen;
+        lblVerifyResult->Caption = "OCC Verify PASS!";
+    }
+    else
+    {
+        lblVerifyResult->Font->Color = clRed;
+        lblVerifyResult->Caption = "OCC Verify FAIL!";
+    }
+}
+
+void __fastcall TfrmDemo::ShowHDRVerifyResult(BYTE IsOK)
+{
+   lblTime->Visible = true;
+
+    if(IsOK == 0)
+    {
+        lblTime->Font->Color = clGreen;
+        lblTime->Caption = "HDR Verify PASS!";
+    }
+    else if (IsOK == 1)
+    {
+        lblTime->Font->Color = clRed;
+        lblTime->Caption = "HDR Verify Gamma FAIL!";
+    }
+    else if (IsOK == 2)
+    {
+        lblTime->Font->Color = clRed;
+        lblTime->Caption = "HDR Verify Gamut FAIL!";
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::btnConnectClick(TObject *Sender)
+{
+    btnConnect->Caption = "Connecting...";
+    int nChannel = StrToInt(edtChannelNum->Text);
+
+    if (caConnect(nChannel)) // Use Channel 14
+    {
+        caSetSyncMode(0); // ntsc
+        caSetSpeed(1); // fast
+        ShowConnectResult(true);
+        btnConnect->Enabled = false;
+
+        BYTE b1CAType[20] = {0};
+        BYTE b1CAVersion[20] = {0};
+        int b1CATypeLength,b1CAVersionLength;
+        b1CATypeLength = caGetCATypeName(b1CAType);
+        b1CAVersionLength = caGetCAVersionName(b1CAVersion);
+
+        if(b1CAType[0] == 'C' && b1CAType[1] == 'A' && b1CAType[2] == '-' && b1CAType[3] == '2' && b1CAType[4] == '1' && b1CAType[5] == '0')
+        {
+           btnConnect->Caption = "Connect CA210";
+           ShowMessage("Suggest using CA-310 !!!");
+           lblConnectResult->Caption = "      CA210";
+           lblConnectResult->Font->Color = clRed;
+        }
+        else
+        {
+           btnConnect->Caption = "Connect CA310";
+           lblConnectResult->Caption = "      CA310";
+           lblConnectResult->Font->Color = clGreen;
+        }
+    }
+    else
+    {
+        ShowConnectResult(false);
+		btnConnect->Caption = "Connect CA310";
+        btnConnect->Enabled = true;
+    }
+
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmDemo::btnTestDllClick(TObject *Sender)
+{
+    Lvxy MeasData[20];
+
+    MeasData[0].Lv = 72.1632;  // R
+    MeasData[0].x = 0.649867;
+    MeasData[0].y = 0.335441;
+
+    MeasData[1].Lv = 0.280586;  // Black
+    MeasData[1].x = 0.265121;
+    MeasData[1].y = 0.266398;
+
+    MeasData[2].Lv = 25.7472;  // Blue
+    MeasData[2].x = 0.147129;
+    MeasData[2].y = 0.0752212;
+
+    MeasData[3].Lv = 198.999; // Green
+    MeasData[3].x = 0.29519;
+    MeasData[3].y = 0.614261;
+
+    MeasData[4].Lv = 297.934;  // White
+    MeasData[4].x = 0.323995;
+    MeasData[4].y = 0.337415;
+
+    MeasData[5].Lv = 293.549;
+    MeasData[5].x = 0.322698;
+    MeasData[5].y = 0.334753;
+
+    MeasData[6].Lv = 280.421;
+    MeasData[6].x = 0.321063;
+    MeasData[6].y = 0.331324;
+
+    MeasData[7].Lv = 249.538;
+    MeasData[7].x = 0.325178;
+    MeasData[7].y = 0.333648;
+
+    MeasData[8].Lv = 207.726;
+    MeasData[8].x = 0.32661;
+    MeasData[8].y = 0.334239;
+
+    MeasData[9].Lv = 160.233;
+    MeasData[9].x = 0.32765;
+    MeasData[9].y = 0.33444;
+
+    MeasData[10].Lv = 115.356;
+    MeasData[10].x = 0.328232;
+    MeasData[10].y = 0.334359;
+
+    MeasData[11].Lv = 79.988;
+    MeasData[11].x = 0.328839;
+    MeasData[11].y = 0.334563;
+
+    MeasData[12].Lv = 52.2231;
+    MeasData[12].x = 0.33024;
+    MeasData[12].y = 0.334923;
+
+    MeasData[13].Lv = 28.6919;
+    MeasData[13].x = 0.332654;
+    MeasData[13].y = 0.334967;
+
+    MeasData[14].Lv = 13.353;
+    MeasData[14].x = 0.336482;
+    MeasData[14].y = 0.336648;
+
+    MeasData[15].Lv = 4.72324;
+    MeasData[15].x = 0.339846;
+    MeasData[15].y = 0.34101;
+
+    MeasData[16].Lv = 1.30557;
+    MeasData[16].x = 0.336982;
+    MeasData[16].y = 0.332909;
+
+    MeasData[17].Lv = 0.452249;
+    MeasData[17].x = 0.306935;
+    MeasData[17].y = 0.296448;
+
+    MeasData[18].Lv = 0.302997;
+    MeasData[18].x = 0.278468;
+    MeasData[18].y = 0.273202;
+
+    MeasData[19].Lv = 0.279302;
+    MeasData[19].x = 0.265542;
+    MeasData[19].y = 0.264932;
+
+    g_rtdColormapSetBatchLvxy(0, 59.8064, 0.510925, 0.335079);
+    g_rtdColormapSetBatchLvxy(1, 155.066, 0.407226, 0.461065);
+    g_rtdColormapSetBatchLvxy(2, 123.998, 0.304457, 0.486352);
+    g_rtdColormapSetBatchLvxy(3, 132.551, 0.247151, 0.330873);
+    g_rtdColormapSetBatchLvxy(4, 73.7429, 0.260476, 0.235318);
+    g_rtdColormapSetBatchLvxy(5, 98.0791, 0.332954, 0.254368);
+    g_rtdColormapSetBatchLvxy(6, 313.181, 0.324569, 0.334487);
+
+    btnTestDll->Caption = "Working";
+    Initial();
+    int nBack[17] = {0};
+    g_rtdGammaGetGrayPattern(nBack);
+    BYTE ucGammaNum = g_rtdGammaGetGammaNum();
+    BYTE ucCTNum = g_rtdGammaGetCTNum();
+
+    int i = 0;
+
+    BYTE ucPreCommand[2048*3] = {0};
+    BYTE Command[128];
+
+    BYTE ucType = 0x2B;
+    ofstream fout("Command.txt");
+
+    g_rtdGammaPatternRGB(MeasData[0], 0 + 1);
+    fout<<"//====R====="<<endl;
+
+
+    int nLength = g_rtdGammaPatternGray(MeasData[1], 2, ucPreCommand, ucType);
+    fout<<"//====Black====="<<endl;
+
+
+    g_rtdGammaPatternRGB(MeasData[2], 3);
+    fout<<"//====Blue====="<<endl;
+
+
+    g_rtdGammaPatternRGB(MeasData[3], 4);
+    fout<<"//====Green====="<<endl;
+
+
+    BYTE ucRGBGainNum = g_rtdGammaPatternWhite(MeasData[4], ucType, ucPreCommand);
+    fout<<"//====White====="<<endl;
+    fout<<"//====RGB Gain====="<<endl;
+    for(i = 0; i < ucRGBGainNum; i++)
+    {
+        fout<<"0x"<<IntToHex((int)ucPreCommand[i], 2).c_str()<<",";
+
+        if(((i+1)%8) == 0)
+        {
+            fout<<endl;
+        }
+    }
+    fout<<endl;
+
+
+    nLength = g_rtdGammaPatternGray(MeasData[5], 6, ucPreCommand, ucType);
+    fout<<"//====Gray 1=====nLength = "<<(int)nLength<<"========"<<endl;
+    for(i = 0; i < nLength; i++)
+    {
+        fout<<"0x"<<IntToHex((int)ucPreCommand[i], 2).c_str()<<",";
+
+        if(((i+1)%8) == 0)
+        {
+            fout<<endl;
+        }
+    }
+    fout<<endl;
+
+    for(BYTE ucIndex = 6; ucIndex < 20; ucIndex++)
+    {
+        nLength = g_rtdGammaPatternGray(MeasData[ucIndex], ucIndex + 1, ucPreCommand, ucType);
+        fout<<"//====Gray "<<(int)(ucIndex - 4)<<"=====nLength = "<<(int)nLength<<"========"<<endl;
+        for(i = 0; i < nLength; i++)
+        {
+            fout<<"0x"<<IntToHex((int)ucPreCommand[i], 2).c_str()<<",";
+
+            if(((i+1)%8) == 0)
+            {
+                fout<<endl;
+            }
+        }
+        fout<<endl;
+
+
+        int nSectorLength = nLength;
+        int nIndex = 0;
+
+        while(nSectorLength > 0)
+        {
+            Command[0] = 0x03;
+            Command[1] = 0xFC;
+            Command[2] = ucIndex + 1;
+            memset(Command + 3, 0, 120);
+            BYTE ucTempLength = TrimString(ucPreCommand + nIndex, Command + 3, &nSectorLength, &nIndex); // Devide long data into <120 Byte packages
+
+            if(ucTempLength >= 120)
+            {
+                ShowMessage("Length > 120!");
+            }
+
+            if(ucTempLength == 0)
+            {
+                ShowMessage(("index == " + IntToStr(nIndex) + "; first Command Length = " + IntToStr(ucPreCommand[nIndex])).c_str());
+            }
+
+            //nIndex += ucTempLength;
+         }
+    }
+
+    g_rtdColormapSetBatchLvxy(0, 59.8064, 0.510925, 0.335079);
+    g_rtdColormapSetBatchLvxy(1, 155.066, 0.407226, 0.461065);
+    g_rtdColormapSetBatchLvxy(2, 123.998, 0.304457, 0.486352);
+    g_rtdColormapSetBatchLvxy(3, 132.551, 0.247151, 0.330873);
+    g_rtdColormapSetBatchLvxy(4, 73.7429, 0.260476, 0.235318);
+    g_rtdColormapSetBatchLvxy(5, 98.0791, 0.332954, 0.254368);
+    g_rtdColormapSetBatchLvxy(6, 313.181, 0.324569, 0.334487);
+
+    g_rtdColormapGetColorMatrix(sRGB_Pattern, _SRGB, _SHIFT_0_BIT);
+    g_rtdColormapGetColorMatrix(AdobeRGB_Pattern, _ADOBERGB, _SHIFT_0_BIT);
+
+    short shCofficient[3][3] = {0};
+
+    for(int k = 0; k < 2; k++)
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            for(int j = 0; j < 3; j++)
+            {
+                shCofficient[i][j] = g_rtdColormapGetCofficient(k, i, j); // Get sRGB coefficient[1,1] in 3x3 matrix
+            }
+        }
+    }
+    fout.close();
+    btnTestDll->Caption = "Test";
+}
+
+void SendEndCommand(void)
+{
+    BYTE Command[5] = {0x03, 0xFC, _END_COMMAND, _OGC_CAL, 0};
+    Command[4] = CalculateCheckSum(5, Command);
+    BYTE ucLength = 5;
+
+    if(!SendCommand(ucLength, Command))
+    {
+        return;
+    }
+}
+
+void SendHDREndCommand(void)
+{
+	BYTE Command[6] = {0x03, 0xFC, 0xBF, 0, 0, 0};
+	Command[3] = frmDemo->HDRType->ItemIndex*2 + frmDemo->rgHDRMode->ItemIndex; // Set final HDR IG Index => 0 = 1200 without DarkEnhance  (range = 0~5) => by Hung 20160720
+	Command[4] = frmDemo->HDRColorMatrix->ItemIndex; // Set final HDR Color Matrix => 0 = sRGB, 1 = Adobe, 2 = DCI_P3, 3 = BT2020 (range = 0~3)=> by Hung 20160720
+    Command[5] = CalculateCheckSum(6, Command);
+    BYTE ucLength = 6;
+
+    if(!SendCommand(ucLength, Command))
+    {
+        return;
+    }
+}
+
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::btnGoClick(TObject *Sender)
+{
+    g_ucVerifyType = 0;
+    lblVerifyResult->Visible = false;
+    lblTime->Visible = false;
+    g_bOCCVerifyOK = true;
+
+    if(!chkbUserRecordMeas->Checked)
+    {
+        if(btnConnect->Enabled)
+        {
+            btnConnectClick(this);
+            if(btnConnect->Enabled)
+            {
+                return;
+            }
+        }
+    }
+    lblVerifyResult->Visible = false;
+
+    if(edtSN->Text == "")
+    {
+        lblVerifyResult->Caption = "Please Enter SN!";
+        lblVerifyResult->Font->Color = clRed;
+        lblVerifyResult->Visible = true;
+        return;
+    }
+
+
+    if((!chkbNoCommu->Checked) && (USBType->ItemIndex == 0))
+    {
+        STRUCT_ENUM_ERROR_TYPE enumError = _ERROR_SUCCESS;
+        enumError = g_stComm.SetDebugMode(_DEBUG_DEBUG);
+        enumError = g_stComm.SetI2CSpeed(IICSpeed);
+
+        if(byPolling != 0)
+        {
+            STRUCT_WAITING_STRUCT stWaiting = {_WAITING_POLLING, IICDelay};
+            enumError = g_stComm.SetWaitingMode(stWaiting);
+        }
+        else
+        {
+            STRUCT_WAITING_STRUCT stWaiting = {_WAITING_DELAY, IICDelay};
+            enumError = g_stComm.SetWaitingMode(stWaiting);
+        }
+
+        if(enumError != _ERROR_SUCCESS)
+        {
+            ShowMessage("Set Communication Error!");
+        }
+
+    }
+
+    int TimeStart = 0;
+    int TimeCount = 0;
+    int TimeStart2 = 0;
+    int TimeCount2 = 0;
+    int nFlowID1 = 0;
+    int nFlowID2 = 0;
+    int HDRCal = _FALSE;
+    int DicomCal = _FALSE;
+    int LocalDimCal = _FALSE;
+	int Freesync2Cal = _FALSE;
+	int HDRFreesync2Cal = _FALSE;
+
+    TimeStart1 = 0;
+    TimeCount1 = 0;
+
+    TimeStart1 = timeGetTime();
+
+    BYTE Command[128];
+	BYTE TemCommand[128];
+    BYTE ucPreCommand[2048*3] ={0};
+    BYTE ucLength = 0;
+    BYTE ucHeaderCheckSum = 0;
+    BYTE ucMatrixCheckSum = 0;
+    CA210DATASTRUCT CA210Data;
+    Lvxy MeaData;
+	Lvxy HDRWhite;
+	Lvxy PanelNativeW;
+	Lvxy MeaDataBlackTemp;
+	int nRGBGainNum = 0;
+
+    m_bStop = false;
+    ofstream fout("Output/Command.txt");
+    ofstream fout2("Output/TimeDelta.txt");
+    ofstream fout3("Output/MeasData.txt");
+	ofstream fout4("Output/MeasData_Fix.txt");
+	ofstream fout5("Output/MeasData_GrayStep.txt");
+    fout3<<"float fMeas[][3] ="<<endl;
+    fout3<<"{"<<endl;
+    fout4<<"float fMeasFix[][3] ="<<endl;
+    fout4<<"{"<<endl;
+    fout5<<"float fMeasGrayStep[][3] ="<<endl;
+    fout5<<"{"<<endl;
+
+    float fWhiteLv = 0;
+
+    int nInterval = StrToInt(edtWaitTime->Text);// 200ms delay;
+    int i, j, k;
+    BYTE ucIndex;
+
+	String strMessage = "Cal ";
+
+    if(!chkbNoCommu->Checked)
+    {
+        if(!CheckFW())
+        {
+            return;
+        }
+    }
+
+    PrintLUTRange();
+
+    btnGo->Enabled = false;
+
+	nFlowID1 = 0;
+
+
+	if(chkbDICOMHDRIndependent->Checked)
+	{
+		if((chkbDICOMOn->Checked) || (chkbHDROn->Checked) || (chkbFreesync2On->Checked))
+			nFlowID2  = 1;
+		else
+			nFlowID2  = 0;
+	}
+	else
+	{
+		nFlowID2  = 0;
+	}
+
+    for(int nFlowID = nFlowID1; nFlowID <= nFlowID2; nFlowID++)
+    {
+	    //========Clear========
+	    Initial();
+	    BYTE ucPatternNum = g_rtdGammaGetGrayPatternNum() + 3;
+	    BYTE ucMaxGammaNumber = g_rtdGammaGetGammaNum();
+	    BYTE ucMaxCTNum = g_rtdGammaGetCTNum();
+	    BYTE ucColorSpace = ColorSpace->ItemIndex < 0 ? 0 : ColorSpace->ItemIndex;
+	    BYTE ucCalibPatternType = rgCalibPattern->ItemIndex > 0 ? rgCalibPattern->ItemIndex : 0;
+	    BYTE ucType;
+		BYTE ucPattern;
+		float fMeasTemp[20][3] = {0};
+		float fMeas1To7Temp[8][3] = {0};
+		int nPatternSelected = 8;
+		bool bIfDecayMode = true;
+
+	    if(ucColorSpace >= 4)
+	    {
+			ucColorSpace++;
+		}
+
+	    if(chkbDICOMHDRIndependent->Checked)
+	    {
+		    if(nFlowID == 1)
+		    {
+	          	ucType = (frmDemo->chkbFreesync2On->Checked << 7)|(frmDemo->ChLocalDimming->Checked << 6)|((ucMaxGammaNumber & 0x07) << 3)| (frmDemo->chkbDICOMEnable->Checked << 2) | (frmDemo->chkbOCCEnable->Checked << 1);// Gamma Num = 2, OGC // bit7:3: ucGammaNum, bit2: DICOM, bit1 OCC, bit0 OGC
+	          	ucPattern = (ucCalibPatternType & 0x01);
+
+		     	if(chkbDICOMOn->Checked)
+				{
+					DicomCal = _TRUE;
+				}
+
+				if(chkbHDROn->Checked)
+				{
+				    HDRCal = _TRUE;
+				}
+				if(chkbFreesync2On->Checked)
+				{
+					Freesync2Cal = _TRUE;
+				}
+
+				if(frmDemo->ChLocalDimming->Checked)
+			    {
+			   	   LocalDimCal = _TRUE;
+			    }
+
+				if((chkbHDROn->Checked) && (chkbFreesync2On->Checked))
+				{
+					HDRFreesync2Cal = _TRUE;
+				}
+			}
+			else
+			{
+				ucType = ((ucMaxGammaNumber & 0x07) << 3) | (frmDemo->chkbOCCEnable->Checked << 1) | (frmDemo->chkbOGCEnable->Checked << 0);// Gamma Num = 2, OGC // bit7:3: ucGammaNum, bit2: DICOM, bit1 OCC, bit0 OGC
+				ucPattern = (ucCalibPatternType & 0x01);
+			}
+		}
+		else
+		{
+			ucType = (frmDemo->chkbFreesync2On->Checked << 7)|(frmDemo->ChLocalDimming->Checked << 6)|((ucMaxGammaNumber & 0x07) << 3) | (frmDemo->chkbDICOMEnable->Checked << 2)|(frmDemo->chkbOCCEnable->Checked << 1) |(frmDemo->chkbOGCEnable->Checked << 0);// Gamma Num = 2, OGC // bit7:3: ucGammaNum, bit2: DICOM, bit1 OCC, bit0 OGC
+			ucPattern = (ucCalibPatternType & 0x01);
+
+			if(chkbDICOMOn->Checked)
+			{
+				DicomCal = _TRUE;
+			}
+
+			if(chkbHDROn->Checked)
+			{
+				HDRCal = _TRUE;
+			}
+
+			if(frmDemo->ChLocalDimming->Checked)
+			{
+			   	LocalDimCal = _TRUE;
+			}
+
+			if(chkbFreesync2On->Checked)
+			{
+				Freesync2Cal = _TRUE;
+			}
+			if((chkbHDROn->Checked) && (chkbFreesync2On->Checked))
+			{
+				HDRFreesync2Cal = _TRUE;
+			}
+		}
+
+
+		if(nFlowID == 1)
+		{
+			Command[0] = 0x03;
+			Command[1] = HextoInt(edtCommand->Text.c_str(), 2);
+			Command[2] = 0xCD; //Set Backlight To Max
+			Command[3] = 0xFF;
+			Command[4] = CalculateCheckSum(4, Command);
+			ucLength = 5;
+
+			if(chkbDebugOn->Checked)
+		    {
+		        fout << "=============HDR change Backlight=============" << endl;
+		        fout << "Command:"<<endl;
+		        for(int dd = 0; dd < ucLength; dd++)
+		        {
+		            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		            if(((dd + 1)%16) == 0)
+		            {
+		                fout<<endl;
+		            }
+		        }
+		        fout<<endl;
+		    }
+
+		    TimeStart = timeGetTime();
+
+		    if(!chkbNoCommu->Checked)
+		    {
+		        if(!SendCommand(ucLength, Command))
+		        {
+		            fout.close();
+		            fout2.close();
+		            fout3.close();
+					fout4.close();
+					fout5.close();
+		            btnGo->Enabled = true;
+		            return;
+		        }
+		    }
+
+		    TimeCount = timeGetTime() - TimeStart;
+
+			if(TimeCount < nInterval)
+			{
+				Sleep(nInterval);
+			}
+		}
+
+		for(int nFlowNum = 0; nFlowNum <= chkbFixMeaData->Checked; nFlowNum++)
+		{
+			Initial();
+		    //=====Start=======
+		    Command[0] = 0x03;
+		    Command[1] = HextoInt(edtCommand->Text.c_str(), 2); // User define
+		    Command[2] = START;    // Please refer to enum OGC_PATTERN
+		    Command[3] = ((ucType & 0x40) << 1) | ((ucPattern & 0x01) << 6) | (ucType & 0x3F);
+
+            if(chkbHDROn->Checked)
+		    {
+				if(ucFWVersion < 2)
+				{
+					Command[4] = 8;  // Set sRGB IG LUT //Bypass IG
+				}
+				else
+				{
+		    		Command[4] = 9;  // Set sRGB IG LUT //Bypass IG
+				}
+		    }
+			else
+			{
+		    	Command[4] = 0;  // Set sRGB IG LUT
+			}
+			Command[5] = nFlowID;
+			Command[6] = (ucType & 0x80) >> 7;
+			Command[7] = CalculateCheckSum(7, Command);
+			ucLength = 8;
+
+		    if(chkbDebugOn->Checked)
+		    {
+		        fout << "=============Start=============" << endl;
+		        fout << "Command:"<<endl;
+		        for(int dd = 0; dd < ucLength; dd++)
+		        {
+		            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		            if(((dd + 1)%16) == 0)
+		            {
+		                fout<<endl;
+		            }
+		        }
+		        fout<<endl;
+		    }
+
+		    TimeStart = timeGetTime();
+
+		    if(!chkbNoCommu->Checked)
+		    {
+		        if(!SendCommand(ucLength, Command))
+		        {
+		            fout.close();
+		            fout2.close();
+		            fout3.close();
+					fout4.close();
+					fout5.close();
+		            btnGo->Enabled = true;
+		            return;
+		        }
+		    }
+
+		    TimeCount = timeGetTime() - TimeStart;
+
+			if(TimeCount < nInterval)
+			{
+				Sleep(nInterval);
+			}
+
+		    //==========Actions=========
+		    for(i = RED; i <= ucPatternNum; i++)
+		    {
+		        fout2<<"===========[Pattern"<<i<<"]==========="<<endl;
+		        Command[2] = i;
+
+		        // Measure
+		        TimeStart2 = timeGetTime();
+
+		        if(!chkbUserRecordMeas->Checked)
+		        {
+		        	if(nFlowNum == 0)
+		        	{
+			            CA210Data = caMeasure();
+			            MeaData.Lv = CA210Data.fLv;
+			            MeaData.x = CA210Data.fSx;
+			            MeaData.y = CA210Data.fSy;
+			            fout3<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+			            fMeasTemp[i - RED][0] = MeaData.Lv;
+			            fMeasTemp[i - RED][1] = MeaData.x;
+			            fMeasTemp[i - RED][2] = MeaData.y;
+		        	}
+					else
+					{
+			            MeaData.Lv = fMeasTemp[i - RED][0];
+			            MeaData.x = fMeasTemp[i - RED][1];
+			            MeaData.y = fMeasTemp[i - RED][2];
+						fout4<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+					}
+		        }
+		        else
+		        {
+		        	if(nFlowNum == 0)
+		        	{
+			            MeaData.Lv = fMeas[i - RED][0];
+			            MeaData.x = fMeas[i - RED][1];
+			            MeaData.y = fMeas[i - RED][2];
+						fout3<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+			            fMeasTemp[i - RED][0] = MeaData.Lv;
+			            fMeasTemp[i - RED][1] = MeaData.x;
+			            fMeasTemp[i - RED][2] = MeaData.y;
+		        	}
+					else
+					{
+			            MeaData.Lv = fMeasTemp[i - RED][0];
+			            MeaData.x = fMeasTemp[i - RED][1];
+			            MeaData.y = fMeasTemp[i - RED][2];
+						fout4<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+					}
+		        }
+
+				TimeCount2 = timeGetTime() - TimeStart2;
+		        fout2<<"Measure:"<<TimeCount2<<endl;
+
+		        if(m_bStop)
+		        {
+		            fout.close();
+		            fout2.close();
+		            fout3.close();
+					fout4.close();
+					fout5.close();
+		            btnGo->Enabled = true;
+		            return;
+		        }
+
+				if(Freesync2Cal)
+				{
+		        	if(i == BLACK)
+		        	{
+						fPanelLvRange[0][0] = MeaData.Lv;
+						fPanelLvRange[1][0] = MeaData.Lv;
+		        	}
+				}
+				if((Freesync2Cal) && (!HDRFreesync2Cal))
+				{
+					if(i == WHITE)
+		        	{
+						fPanelLvRange[0][1] = MeaData.Lv;
+						fPanelLvRange[1][1] = MeaData.Lv;
+
+						Edit1->Text = fPanelLvRange[0][0];
+						Edit2->Text = fPanelLvRange[0][1];
+						Edit3->Text = fPanelLvRange[1][0];
+						Edit4->Text = fPanelLvRange[1][1];
+
+						/*TemCommand[3] = ceil(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+						fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+						TemCommand[5] = ceil(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+						fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+
+						if(fPanelLvRangeInEDID[0][1] < _FS2_Max_Lv_Criteria)
+						{
+							TemCommand[3] = ceil(32*log(_FS2_Max_Lv_Criteria/50)/log(2));
+							fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+							TemCommand[5] = ceil(32*log(_FS2_Max_Lv_Criteria/50)/log(2));
+							fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+						}*/
+						TemCommand[3] = floor(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+						fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+						TemCommand[5] = floor(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+						fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+
+						if(fPanelLvRangeInEDID[0][1] < _FS2_Max_Lv_Criteria)
+						{
+							TemCommand[3] = ceil(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+							fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+							TemCommand[5] = ceil(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+							fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+						}
+						/*TemCommand[4] = floor(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+						fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+						TemCommand[6] = floor(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+						fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+
+						if(fPanelLvRangeInEDID[0][0] > _FS2_Min_Lv_Criteria)
+						{
+							TemCommand[4] =  floor(255*sqrt(_FS2_Min_Lv_Criteria*100/fPanelLvRangeInEDID[0][1]));
+							fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+							TemCommand[6] =  floor(255*sqrt(_FS2_Min_Lv_Criteria*100/fPanelLvRangeInEDID[1][1]));
+							fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+						}*/
+						TemCommand[4] = ceil(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+						fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+						TemCommand[6] = ceil(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+						fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+
+						if(fPanelLvRangeInEDID[0][0] > _FS2_Min_Lv_Criteria)
+						{
+							TemCommand[4] = floor(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+							fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+							TemCommand[6] = floor(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+							fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+						}
+
+						Edit13->Text = fPanelLvRangeInEDID[0][0];
+						Edit14->Text = fPanelLvRangeInEDID[0][1];
+						Edit15->Text = fPanelLvRangeInEDID[1][0];
+						Edit16->Text = fPanelLvRangeInEDID[1][1];
+
+						g_rtdGammaSetFreesyncIIEDIDLv(fPanelLvRange[0][0],fPanelLvRange[0][1]);
+					}
+				}
+
+				//Fix Lv for Dark Panel, Pattern 1~7
+				//Black Measure Data=>Lv_nPatternSelected Measure Data
+				if((i == BLACK) && (chkbFixMeaData->Checked))
+				{
+					int nPattern_10bit = 0;
+					float fMinMeasureData = 10000;
+
+					//find Min 10bit Code-nPatternSelected for 0.005nits,replace Lv_0 with Lv_nPatternSelected
+					for(int n = 0; n < 4; n++)
+					{
+
+						if(n != 0)
+						{
+							Command[2] = 0xA0;
+							Command[3] = nPattern_10bit >> 8;
+							Command[4] = nPattern_10bit & 0xFF;
+							Command[5] = CalculateCheckSum(5, Command);
+							ucLength = 6;
+
+				            if(chkbDebugOn->Checked)
+				            {
+				                fout<<"=======Pattern 10bit"<<nPattern_10bit<<"======="<<endl;
+				                fout<<"Command:"<<endl;
+
+				                for(int dd = 0; dd < ucLength; dd++)
+				                {
+				                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+				                    if(((dd + 1)%16) == 0)
+				                    {
+				                        fout<<endl;
+				                    }
+				                }
+				                fout<<endl;
+				            }
+
+				            TimeStart2 = timeGetTime();
+
+				            if(!chkbNoCommu->Checked)
+				            {
+				                if(!SendCommand(ucLength, Command))
+				                {
+				                    fout.close();
+				                    fout2.close();
+				                    fout3.close();
+									fout4.close();
+									fout5.close();
+				                    btnGo->Enabled = true;
+				                    return;
+				                }
+				            }
+				            TimeCount2 = timeGetTime() - TimeStart2;
+				            fout2<<"Send Command: "<<TimeCount2<<endl;
+
+							// Measure
+					        TimeStart2 = timeGetTime();
+
+					        if(!chkbUserRecordMeas->Checked)
+					        {
+					        	if(nFlowNum == 0)
+					        	{
+						            CA210Data = caMeasure();
+						            MeaData.Lv = CA210Data.fLv;
+						            MeaData.x = CA210Data.fSx;
+						            MeaData.y = CA210Data.fSy;
+						            fout5<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+						            fMeas1To7Temp[nPattern_10bit][0] = MeaData.Lv;
+						            fMeas1To7Temp[nPattern_10bit][1] = MeaData.x;
+						            fMeas1To7Temp[nPattern_10bit][2] = MeaData.y;
+					        	}
+								else
+								{
+						            MeaData.Lv = fMeas1To7Temp[nPattern_10bit][0];
+						            MeaData.x = fMeas1To7Temp[nPattern_10bit][1];
+						            MeaData.y = fMeas1To7Temp[nPattern_10bit][2];
+								}
+					        }
+					        else
+					        {
+					        	if(nFlowNum == 0)
+					        	{
+						            MeaData.Lv = ((8 - nPattern_10bit)*fMeas[1][0] + nPattern_10bit*fMeas[19][0])/8;
+						            MeaData.x = fMeas[19][1];
+						            MeaData.y = fMeas[19][2];
+									fout5<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+						            fMeas1To7Temp[nPattern_10bit][0] = MeaData.Lv;
+						            fMeas1To7Temp[nPattern_10bit][1] = MeaData.x;
+						            fMeas1To7Temp[nPattern_10bit][2] = MeaData.y;
+					        	}
+								else
+								{
+						            MeaData.Lv = fMeas1To7Temp[nPattern_10bit][0];
+						            MeaData.x = fMeas1To7Temp[nPattern_10bit][1];
+						            MeaData.y = fMeas1To7Temp[nPattern_10bit][2];
+								}
+					        }
+
+							TimeCount2 = timeGetTime() - TimeStart2;
+					        fout2<<"Measure:"<<TimeCount2<<endl;
+						}
+						else
+						{
+							MeaDataBlackTemp.Lv = MeaData.Lv;
+							MeaDataBlackTemp.x = MeaData.x;
+							MeaDataBlackTemp.y = MeaData.y;
+						}
+
+						g_rtdGammaSet1To7PatternGray(MeaData, nPattern_10bit);
+
+						if(MeaData.Lv < _CA310_Lv)
+						{
+							nPattern_10bit = nPattern_10bit + (4/pow(2,n));
+						}
+						else
+						{
+							if(MeaData.Lv < fMinMeasureData)
+							{
+								fMinMeasureData = MeaData.Lv;
+								nPatternSelected= nPattern_10bit;
+							}
+							if(n == 0)
+							{
+								bIfDecayMode = false;
+								break;
+							}
+							nPattern_10bit = nPattern_10bit - (4/pow(2,n));
+						}
+
+						if(n == 3)
+						{
+							if(nPatternSelected == 8)
+							{
+								ShowMessage("Panel is too dark!");
+								return;
+							}
+
+							Command[2] = i;
+
+							MeaData.Lv = MeaDataBlackTemp.Lv;
+							MeaData.x = MeaDataBlackTemp.x;
+							MeaData.y = MeaDataBlackTemp.y;
+						}
+
+					}
+
+					//Command[2] = i;
+
+					g_rtdGammaSetLUTDecayMode(bIfDecayMode, nPatternSelected);
+				}
+
+		        if(i == WHITE)
+		        {
+		            fWhiteLv = MeaData.Lv;
+		        }
+
+
+		        switch(i)
+		        {
+		            case RED:
+		                fPanelRGBWxy[0][0] = MeaData.x;
+		                fPanelRGBWxy[0][1] = MeaData.y;
+		                break;
+		            case GREEN:
+		                fPanelRGBWxy[1][0] = MeaData.x;
+		                fPanelRGBWxy[1][1] = MeaData.y;
+		                break;
+		            case BLUE:
+		                fPanelRGBWxy[2][0] = MeaData.x;
+		                fPanelRGBWxy[2][1] = MeaData.y;
+		                break;
+		            case WHITE:
+		                fPanelRGBWxy[3][0] = MeaData.x;
+		                fPanelRGBWxy[3][1] = MeaData.y;
+		                break;
+		            default:
+		                break;
+
+		        }
+
+
+		        // Show Pattern First
+		        if((i > GRAY1)&&(i < ucPatternNum))
+		        {
+		        	if(nFlowNum == 0)
+		        	{
+				        Command[3] = 2;
+				        Command[4] = 0xFF;
+				        Command[5] = CalculateCheckSum(5, Command);
+				        ucLength = 6;
+
+			            if(chkbDebugOn->Checked)
+			            {
+			                fout<<"=============Pattern"<<i<<"============="<<endl;
+			                fout<<"Command:"<<endl;
+
+			                for(int dd = 0; dd < ucLength; dd++)
+			                {
+			                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+			                    if(((dd + 1)%16) == 0)
+			                    {
+			                        fout<<endl;
+			                    }
+			                }
+			                fout<<endl;
+			            }
+
+			            TimeStart2 = timeGetTime();
+
+			            if(!chkbNoCommu->Checked)
+			            {
+			                if(!SendCommand(ucLength, Command))
+			                {
+			                    fout.close();
+			                    fout2.close();
+			                    fout3.close();
+								fout4.close();
+								fout5.close();
+			                    btnGo->Enabled = true;
+			                    return;
+			                }
+			            }
+			            TimeCount2 = timeGetTime() - TimeStart2;
+			            fout2<<"Send Command: "<<TimeCount2<<endl;
+		        	}
+		        }
+
+		        if(i == WHITE) // 03, FC, 01, checksum
+			    {
+		            BYTE *ucPreCommand = new BYTE[ucMaxGammaNumber * ucMaxCTNum * 6];
+		            TimeStart2 = timeGetTime();
+
+					float Minimun_Lv[6];
+		    		float x_Range = StrToFloat(edtxRange->Text);
+					float y_Range = StrToFloat(edtyRange->Text);
+					Minimun_Lv[0] = StrToFloat(edtLv1->Text);
+					Minimun_Lv[1] = StrToFloat(edtLv2->Text);
+					Minimun_Lv[2] = StrToFloat(edtLv3->Text);
+					Minimun_Lv[3] = StrToFloat(edtLv4->Text);
+					Minimun_Lv[4] = StrToFloat(edtLv5->Text);
+					Minimun_Lv[5] = StrToFloat(edtLv6->Text);
+					g_rtdGammaSetMinLv(chkbMinLvMode->Checked, Minimun_Lv, x_Range, y_Range);//justin_sun
+
+		            PanelNativeW.Lv = MeaData.Lv;
+		            PanelNativeW.x = MeaData.x;
+		            PanelNativeW.y = MeaData.y;
+
+
+		            nRGBGainNum = g_rtdGammaPatternWhite(MeaData, ucType, ucPreCommand);
+
+			        TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Pattern White: "<<TimeCount2<<endl;
+
+					if(nFlowID == 0)
+					{
+					    ofstream foutrgb("Output/RGB gain.txt");
+
+					    for(int kk = 0; kk < nRGBGainNum; kk++)
+					    {
+							foutrgb<<"0x"<<IntToHex((int)ucPreCommand[kk], 2).c_str()<<",";
+
+							if(((kk+1)%16) == 0)
+							{
+							  	foutrgb<<endl;
+							}
+					    }
+					    foutrgb.close();
+					}
+		            int nLength = nRGBGainNum;
+		            int nPointer = 0;
+
+		            if(chkbUseVisualFlash->Checked)
+		            {
+		                memset(ucFlash, 0xFF, sizeof(ucFlash));
+		            }
+
+		            if(nLength > 0)
+		            {
+		                while(nLength > 0)
+		                {
+		                    BYTE ucOneLen = 0;
+		                    if(nLength > _ONE_TRAMSMIT_LIMIT)
+		                    {
+		                        ucOneLen = _ONE_TRAMSMIT_LIMIT;
+		                        nLength = nLength - _ONE_TRAMSMIT_LIMIT;
+		                    }
+		                    else
+		                    {
+		                        ucOneLen = nLength;
+		                        nLength = 0;
+		                    }
+
+		                    memcpy(Command + 3, ucPreCommand + nPointer, ucOneLen);
+		                    Command[3 + ucOneLen] = CalculateCheckSum(3 + ucOneLen, Command);
+		                    nPointer += ucOneLen;
+		                    ucLength = 4 + ucOneLen;
+		                    TimeStart = timeGetTime();
+
+		                    if(!chkbNoCommu->Checked)
+		                    {
+		                        if(!SendCommand(ucLength, Command))//保留
+		                        {
+		                            delete []ucPreCommand;
+		                            ucPreCommand = NULL;
+		                            fout.close();
+		                            fout2.close();
+		                            fout3.close();
+									fout4.close();
+									fout5.close();
+		                            btnGo->Enabled = true;
+		                            return;
+		                        }
+		                    }
+		                    TimeStart2 = timeGetTime();
+		                }
+		            }
+		            else
+		            {
+		                Command[3] = CalculateCheckSum(3, Command);
+		                ucLength = 4;
+
+		                if(!chkbNoCommu->Checked)
+		                {
+		                    if(!SendCommand(ucLength, Command))//保留
+		                    {
+		                        delete []ucPreCommand;
+		                        ucPreCommand = NULL;
+		                        fout.close();
+		                        fout2.close();
+		                        fout3.close();
+								fout4.close();
+								fout5.close();
+		                        btnGo->Enabled = true;
+		                        return;
+		                    }
+		                }
+		            }
+
+		            if(chkbDebugOn->Checked)
+		            {
+		                fout<<"=============Pattern"<<i<<"============="<<endl;
+		                fout<<"Command:"<<endl;
+		                for(int dd = 0; dd < ucLength; dd++)
+		                {
+		                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                    if(((dd + 1)%16) == 0)
+		                    {
+		                        fout<<endl;
+		                    }
+		                }
+		                fout<<endl;
+		            }
+
+		            TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Send Command: "<<TimeCount2<<endl;
+		            delete []ucPreCommand;
+		            ucPreCommand = NULL;
+			    }
+		        else if(i == RED || i == GREEN || i == BLUE)
+			    {
+			        TimeStart2 = timeGetTime();
+			   	    g_rtdGammaPatternRGB(MeaData, i);
+			   	    TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Pattern RGB: "<<TimeCount2<<endl;
+			        Command[3] = CalculateCheckSum(3, Command);
+			        ucLength = 4;
+		        	TimeStart = timeGetTime();
+
+		        	if(chkbDebugOn->Checked)
+		            {
+		                fout<<"=============Pattern"<<i<<"============="<<endl;
+		                fout<<"Command:"<<endl;
+		                for(int dd = 0; dd < ucLength; dd++)
+		                {
+		                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                    if(((dd + 1)%16) == 0)
+		                    {
+		                        fout<<endl;
+		                    }
+		                }
+		                fout<<endl;
+		            }
+		            TimeStart2 = timeGetTime();
+
+		            if(!chkbNoCommu->Checked)
+		            {
+		                if(!SendCommand(ucLength, Command))//保留
+		                {
+		                    fout.close();
+		                    fout2.close();
+		                    btnGo->Enabled = true;
+		                    return;
+		                }
+		            }
+
+		        	TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Send Command: "<<TimeCount2<<endl;
+			    }
+		        else if(i == GRAY1)
+		        {
+		            TimeStart2 = timeGetTime();
+		            g_rtdGammaPatternGray(MeaData, i, ucPreCommand, ucType);   // Wendy edit 20140808
+			   	    TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Pattern GRAY 1: "<<TimeCount2<<endl;
+
+		            BYTE ucIndex = 0;
+		            Command[3] = chkbOGCEnable->Checked;
+
+		            ucIndex++;
+		            Command[3 + ucIndex] = g_rtdGammaGetGammaNum(); // Total Gamma
+		            ucIndex++;
+		            for(BYTE j = 0; j < Command[4]; j++, ucIndex++)
+		            {
+		                float fGammaIndex = 10 * g_rtdGammaGetGammaIndex(j);
+		                Command[3 + ucIndex] =(BYTE)(fGammaIndex + 0.5);
+		            }
+
+		            Command[3 + ucIndex] = g_rtdGammaGetCTNum(); // Total CT
+		            ucIndex++;
+
+		            for(BYTE j = 1; j <= g_rtdGammaGetCTNum(); j++)
+		            {
+		                TComboBox *combCT;
+		                if(this->FindComponent("combCT" + IntToStr(j)))
+		                {
+		                    combCT = dynamic_cast<TComboBox*>(this->FindComponent("combCT" + IntToStr(j)));
+		                }
+
+		                Command[3 + ucIndex] = (StrToInt(combCT->Text) - 5000)/100;
+		                ucIndex++;
+		            }
+
+		            Command[3 + ucIndex] = chkbOCCEnable->Checked;
+		            ucIndex++;
+
+
+		            Command[3 + ucIndex] = 3;// 3 group of Matrix;
+		            ucIndex++;
+
+		            Command[3 + ucIndex] = chkbDICOMEnable->Checked;
+		            ucIndex++;
+
+		            Command[3 + ucIndex] = rgDICOMMode->ItemIndex;
+		            ucIndex++;
+
+		            WORD usWhiteLv = fWhiteLv * 100 + 0.5;
+		            Command[3 + ucIndex] = usWhiteLv >> 8;
+		            ucIndex++;
+		            Command[3 + ucIndex] = usWhiteLv & 0xFF;
+		            ucIndex++;
+			        Command[3 + ucIndex] = CalculateCheckSum(3 + ucIndex, Command);
+			        ucLength = 4 + ucIndex;
+
+					ucHeaderCheckSum = 0;
+					for(int cnt = 3; cnt < (3 + ucIndex); cnt++)
+						ucHeaderCheckSum += Command[cnt];
+
+		        	TimeStart = timeGetTime();
+
+		        	if(chkbDebugOn->Checked)
+		            {
+		                fout<<"=============Pattern"<<i<<"============="<<endl;
+		                fout<<"Command:"<<endl;
+		                for(int dd = 0; dd < ucLength; dd++)
+		                {
+		                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                    if(((dd + 1)%16) == 0)
+		                    {
+		                        fout<<endl;
+		                    }
+		                }
+		                fout<<endl;
+		            }
+		            TimeStart2 = timeGetTime();
+
+		            if(!chkbNoCommu->Checked)
+		            {
+		                if(!SendCommand(ucLength, Command))//保留
+		                {
+		                    fout.close();
+		                    fout2.close();
+		                    btnGo->Enabled = true;
+		                    return;
+		                }
+		            }
+
+		        	TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Send Command: "<<TimeCount2<<endl;
+		        }
+		        else if(i == BLACK)
+			    {
+			        TimeStart2 = timeGetTime();
+		        	g_rtdGammaPatternGray(MeaData, i, ucPreCommand, ucType); // Save measured Data
+
+		        	if(chkbHDROn->Checked)
+		        	{
+		                edtPanelMinLv->Text = MeaData.Lv;
+		        	}
+
+		        	TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Pattern Gray: "<<TimeCount2<<endl;
+		        	Command[3] = CalculateCheckSum(3, Command);
+				    ucLength = 4;
+		        	TimeStart = timeGetTime();
+
+		        	if(chkbDebugOn->Checked)
+		            {
+		                fout<<"=============Pattern"<<i<<"============="<<endl;
+		                fout<<"Command:"<<endl;
+		                for(int dd = 0; dd < ucLength; dd++)
+		                {
+		                    fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                    if(((dd + 1)%16) == 0)
+		                    {
+		                        fout<<endl;
+		                    }
+		                }
+		                fout<<endl;
+		            }
+
+		            TimeStart2 = timeGetTime();
+
+		            if(!chkbNoCommu->Checked)
+		            {
+		                if(!SendCommand(ucLength, Command))//保留
+		                {
+		                    fout.close();
+		                    fout2.close();
+		                    btnGo->Enabled = true;
+		                    return;
+		                }
+		            }
+
+		        	TimeCount2 = timeGetTime() - TimeStart2;
+		            fout2<<"Send Command: "<<TimeCount2<<endl;
+			    }
+		        else
+			    {
+			        BYTE ucTempLength = 0;
+			        int nIndex = 0;
+			        int nPointer = 0;
+			        int nSectorLength = 0;
+			        TimeStart2 = timeGetTime();
+				    nSectorLength = g_rtdGammaPatternGray(MeaData, i, ucPreCommand, ucType); // Save Measured data & Calculate LUT
+
+					if(nFlowNum == chkbFixMeaData->Checked)
+					{
+			            ofstream foutPre("PreCommand.txt", ios_base::app);
+			            foutPre<<"========Pattern "<<i<<"=========="<<endl;
+			            for(int n = 0; n < nSectorLength; n++)
+			            {
+			                foutPre<<IntToHex(ucPreCommand[n], 2).c_str()<<" ";
+			                if((n+1)%16 == 0)
+			                {
+			                    foutPre<<endl;
+			                }
+			            }
+			            foutPre<<endl;
+			            foutPre.close();
+
+					    TimeCount2 = timeGetTime() - TimeStart2;
+			            fout2<<"Pattern Gray: "<<TimeCount2<<endl;
+			            TimeStart = timeGetTime();
+
+			            while(nSectorLength > 0)
+			            {
+			                memset(Command + 3, 0, 120);
+			                ucTempLength = TrimString(ucPreCommand + nIndex, Command + 3, &nSectorLength, &nPointer); // Devide long data into <120 Byte packages
+
+			                if(ucTempLength >= 120)
+			                {
+			                    ShowMessage("Length > 120!");
+			                }
+
+			                if(ucTempLength == 0)
+			                {
+			                    ShowMessage(("index == " + IntToStr(nIndex) + "; first Command Length = " + IntToStr(ucPreCommand[nIndex])).c_str());
+			                }
+
+			                if((Command[0] != 0x03)||(Command[1] != HextoInt(edtCommand->Text.c_str(), 2)) ||(Command[2] != i))
+			                {
+			                    ShowMessage(("Wrong Format: " + IntToHex(Command[0], 2)+ ", " + IntToHex(Command[1], 2) + ", "+IntToHex(Command[2], 2)).c_str());
+			                }
+
+			                nIndex = nPointer;
+			                ucLength = ucTempLength + 3;
+
+			                Command[ucLength] = CalculateCheckSum(ucLength, Command);
+			                ucLength++;
+			                //-----------Debug Start --------------------
+			                if(chkbUseVisualFlash->Checked)
+			                {
+			                    memcpy(g_pucDdcciRxBuf + 2, Command, ucLength);
+			                    UserCommonDdcciDispCalibSaveLUT(ucLength + 2);
+			                    PrintFlash();
+			                }
+			                //-----------Debug End --------------------
+			                if(chkbDebugOn->Checked)
+			                {
+			                    fout<<"=============Pattern"<<i<<"============="<<endl;
+			                    fout<<"Command:"<<endl;
+			                    for(int dd = 0; dd < ucLength; dd++)
+			                    {
+			                        fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+			                        if(((dd + 1)%16) == 0)
+			                        {
+			                            fout<<endl;
+			                        }
+			                    }
+			                    fout<<endl;
+			                }
+
+			                TimeStart2 = timeGetTime();
+
+			                if(!chkbNoCommu->Checked)
+			                {
+			                    if(!SendCommand(ucLength, Command))//删除
+			                    {
+			                        fout.close();
+			                        fout2.close();
+			                        btnGo->Enabled = true;
+			                        return;
+			                    }
+			                }
+
+			                TimeCount2 = timeGetTime() - TimeStart2;
+			                fout2<<"Send Command: "<<TimeCount2<<endl;
+			             }
+					}
+				}
+
+
+		        TimeCount = timeGetTime();
+		        TimeCount = TimeCount - TimeStart;
+
+		        if(TimeCount < nInterval)
+		        {
+		        	Sleep(nInterval - TimeCount);
+		        }
+		        Application->ProcessMessages();
+
+			}//for(i = RED; i <= ucPatternNum; i++)
+
+			if(nFlowNum != chkbFixMeaData->Checked)
+			{
+				g_rtdGammaGetFixedMeasureData(fMeasTemp, fMeas1To7Temp);
+			}
+
+    	}
+
+	    //============ Gamma Calibration End ==============
+	    Command[2] = 0xAA; // 0xAA is Gamma Finish Command
+	    if(chkbOCCEnable->Checked)// if do occ, Command[3] = 1(OCC) ; else Command[3] = DICOM(set 2) or OGC(set 0)
+	    {
+	        Command[3] = OCC;
+	    }
+	    else
+	    {
+	        if(chkbOGCEnable->Checked)
+	        {
+	            Command[3] = OGC;
+	        }
+	        else
+	        {
+	            Command[3] = DICOM;
+	        }
+	    }
+	    TimeStart2 = timeGetTime();
+	    Command[4] = g_rtdGammaCalculateTotalCheckSum(OGC, ucMaxGammaNumber);  // Command[4]: OGC Checksum; if do OGC, Command[4] = g_rtdGammaCalculateTotalCheckSum(0, ucMaxGammaNumber);
+
+	    if(chkbOCCEnable->Checked)
+	    {
+	        Command[5] = g_rtdGammaCalculateTotalCheckSum(OCC, 0);  // Command[6]: OCC LUT checksum;  if no OCC, set 0;
+	    }
+	    else
+	    {
+	        Command[5] = 0;
+	    }
+
+	    if(chkbDICOMEnable->Checked)
+	    {
+	        //BYTE ucCKS = UserCommonDdcciDispCalibCalCheckSum(_DICOM_TYPE);
+	        Command[6] = g_rtdGammaCalculateTotalCheckSum(DICOM, 0);  // Command[7]:DICOM LUT Checksum; if do  DICOM, Command[7] = g_rtdGammaCalculateTotalCheckSum(DICOM, 0);
+	        laMinJND->Caption = g_rtdDICOMGetMinJND(); // Hung
+	        laMaxJND->Caption = g_rtdDICOMGetMaxJND(); // Hung
+	        laStep->Caption = g_rtdDICOMGetJNDStep(); // Hung
+			/*
+			if(g_rtdDICOMGetJNDStep() < 1)
+			{
+			   ShowMessage("JNDStep < 1");
+			}
+			*/
+	    }
+	    else
+	    {
+	        Command[6] = 0;
+	    }
+
+	    BYTE ucFinalGamma = combFinalGamma->ItemIndex;
+	    BYTE ucFinalCT = combFinalCT->ItemIndex;
+
+	    if(combFinalCT->Text == "Native")
+	    {
+	        ucFinalCT = 0x0F;
+	    }
+
+	    Command[7] = (ucFinalGamma << 4) | ucFinalCT;  // Final CT & Gamma Show(if you want to show Gamma in the end)  (combFinalGamma->ItemIndex << 4)|combFinalCT->ItemIndex;
+	    Command[8] = g_rtdGammaCalculateTotalCheckSum(RGB_GAMMA, ucMaxGammaNumber);
+	    Command[9] = g_rtdGammaCalculateTotalCheckSum(_LOCAL_DIMMING, 0);
+		if(chkbFreesync2On->Checked)
+			Command[10] = g_rtdGammaCalculateTotalCheckSum(FREESYNC2, 0);
+		else
+			Command[10] = 0;
+	    Command[11] = CalculateCheckSum(11, Command);
+	    ucLength = 12;
+
+
+	    TimeCount2 = timeGetTime() - TimeStart2;
+	    fout2<<"==========Final==========="<<endl;
+	    fout2<<"Cal Checksum: "<<TimeCount2<<endl;
+
+	    if(chkbDebugOn->Checked)
+	    {
+	        fout<<"=============Pattern"<<i<<"============="<<endl;
+	        fout<<"Command:"<<endl;
+	        for(int dd = 0; dd < ucLength; dd++)
+	        {
+	            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+	            if(((dd + 1)%16) == 0)
+	            {
+	                fout<<endl;
+	            }
+	        }
+	        fout<<endl;
+	    }
+	    TimeStart2 = timeGetTime();
+
+	    if(!chkbNoCommu->Checked)
+	    {
+	        if(!SendCommand(ucLength, Command))
+	        {
+	            fout.close();
+	            fout2.close();
+	            btnGo->Enabled = true;
+	            return;
+	        }
+	    }
+
+	    TimeCount2 = timeGetTime() - TimeStart2;
+	    fout2<<"Send Command: "<<TimeCount2<<endl;
+	    Application->ProcessMessages();
+
+	    fout3<<"};"<<endl<<endl;
+		fout4<<"};"<<endl<<endl;
+		fout5<<"};"<<endl<<endl;
+
+        if(nFlowID == 0)
+		{
+          	//=============Check RGB Gain & Header Checksum=============
+
+			Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+			Command[3] = 3; // RGB Gain Mode
+			Command[4] = g_rtdGammaCalculateTotalCheckSum(OGC_RGB_GAIN,0);
+			Command[5] = ucHeaderCheckSum;
+			Command[6] = CalculateCheckSum(6, Command);
+			ucLength = 7;
+
+			if(chkbDebugOn->Checked)
+			{
+			 	fout<<"=============MATRIXCKSUM============="<<endl;
+			 	fout<<"Command:"<<endl;
+			 	for(int dd = 0; dd < ucLength; dd++)
+			 	{
+			  		fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+			   		if(((dd + 1)%16) == 0)
+					{
+						fout<<endl;
+					}
+			  	}
+			    fout<<endl;
+			}
+
+			if(!chkbNoCommu->Checked)
+			{
+			  	if(!SendCommand(ucLength, Command))
+			  	{
+			      	btnGo->Enabled = true;
+			      	return;
+			  	}
+			}
+		}
+
+	    //=============OCC Start=============
+	    if(chkbOCCEnable->Checked)
+	    {
+	        fout3<<"float fOCCMeas[][3] ="<<endl;
+	        fout3<<"{"<<endl;
+
+	        if(chkbSetPanelOrg->Checked)
+	        {
+	            edtRx->Text = fPanelRGBWxy[_R][0];
+	            edtRy->Text = fPanelRGBWxy[_R][1];
+	            edtGx->Text = fPanelRGBWxy[_G][0];
+	            edtGy->Text = fPanelRGBWxy[_G][1];
+	            edtBx->Text = fPanelRGBWxy[_B][0];
+	            edtBy->Text = fPanelRGBWxy[_B][1];
+	            edtWx->Text = 0.313;
+	            edtWy->Text = 0.329;
+	        }
+
+	        Sleep(nInterval);
+	        int loop = (chkbLUTMode->Checked) ? 3 : 1;
+	        int nPatternEnd = (chkbLUTMode->Checked) ? SRGB20 : SRGB6;
+
+	        for(BYTE jj = 0; jj < loop; jj++)
+	        {
+	            for(i = SRGB0 + jj*7; i < SRGB0 + (jj+1)*7; i++)
+	            {
+	                Command[2] = i;
+	                fout2<<"==========Pattern"<<i<<"==========="<<endl;
+
+	                if(m_bStop)
+	                {
+	                    btnGo->Enabled = true;
+	                    return;
+	                }
+
+	                TimeStart2 = timeGetTime();
+
+	                if(!chkbUserRecordMeas->Checked)
+	                {
+	                    CA210Data = caMeasure();
+	                    MeaData.Lv = CA210Data.fLv;
+	                    MeaData.x = CA210Data.fSx;
+	                    MeaData.y = CA210Data.fSy;
+	                    fout3<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+	                }
+	                else
+	                {
+	                    MeaData.Lv = fOCCMeas[i - SRGB0][0];
+	                    MeaData.x = fOCCMeas[i - SRGB0][1];
+	                    MeaData.y = fOCCMeas[i - SRGB0][2];
+						fout3<<"\t"<<MeaData.Lv<<","<<MeaData.x<<","<<MeaData.y<<","<<endl;
+	                }
+
+
+	                TimeCount2 = timeGetTime() - TimeStart2;
+	                fout2<<"Measure: "<<TimeCount2<<endl;
+
+	                ucIndex = i - SRGB0 - jj*7;
+	                TimeStart2 = timeGetTime();
+	                g_rtdColormapSetBatchLvxy(ucIndex, MeaData.Lv, MeaData.x , MeaData.y); // Save Measured data
+
+	                if(i == SRGB6)
+	                {
+	                    g_rtdColormapSetWhiteLvxy(MeaData.Lv, MeaData.x , MeaData.y);
+
+						if((Freesync2Cal) && (HDRFreesync2Cal))
+						{
+							fPanelLvRange[0][1] = MeaData.Lv;
+							fPanelLvRange[1][1] = MeaData.Lv;
+
+							Edit1->Text = fPanelLvRange[0][0];
+							Edit2->Text = fPanelLvRange[0][1];
+							Edit3->Text = fPanelLvRange[1][0];
+							Edit4->Text = fPanelLvRange[1][1];
+
+							/*TemCommand[3] = ceil(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+							fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+							TemCommand[5] = ceil(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+							fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+
+							if(fPanelLvRangeInEDID[0][1] < _FS2_Max_Lv_Criteria)
+							{
+								TemCommand[3] = ceil(32*log(_FS2_Max_Lv_Criteria/50)/log(2));
+								fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+								TemCommand[5] = ceil(32*log(_FS2_Max_Lv_Criteria/50)/log(2));
+								fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+							}*/
+							TemCommand[3] = floor(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+							fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+							TemCommand[5] = floor(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+							fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+
+							if(fPanelLvRangeInEDID[0][1] < _FS2_Max_Lv_Criteria)
+							{
+								TemCommand[3] = ceil(32*log(fPanelLvRange[0][1]/50)/log(2));//MaxBacklightMaxLv
+								fPanelLvRangeInEDID[0][1] = 50*pow(2,((float)TemCommand[3])/32);
+								TemCommand[5] = ceil(32*log(fPanelLvRange[1][1]/50)/log(2));//MinBacklightMaxLv
+								fPanelLvRangeInEDID[1][1] = 50*pow(2,((float)TemCommand[5])/32);
+							}
+							/*TemCommand[4] = floor(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+							fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+							TemCommand[6] = floor(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+							fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+
+							if(fPanelLvRangeInEDID[0][0] > _FS2_Min_Lv_Criteria)
+							{
+								TemCommand[4] =  floor(255*sqrt(_FS2_Min_Lv_Criteria*100/fPanelLvRangeInEDID[0][1]));
+								fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+								TemCommand[6] =  floor(255*sqrt(_FS2_Min_Lv_Criteria*100/fPanelLvRangeInEDID[1][1]));
+								fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+							}*/
+							TemCommand[4] = ceil(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+							fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+							TemCommand[6] = ceil(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+							fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+
+							if(fPanelLvRangeInEDID[0][0] > _FS2_Min_Lv_Criteria)
+							{
+								TemCommand[4] = floor(255*sqrt(fPanelLvRange[0][0]*100/fPanelLvRangeInEDID[0][1]));//MaxBacklightMinLv
+								fPanelLvRangeInEDID[0][0] = fPanelLvRangeInEDID[0][1]*pow(((float)TemCommand[4])/255,2)/100;
+								TemCommand[6] = floor(255*sqrt(fPanelLvRange[1][0]*100/fPanelLvRangeInEDID[1][1]));//MinBacklightMinLv
+								fPanelLvRangeInEDID[1][0] = fPanelLvRangeInEDID[1][1]*pow(((float)TemCommand[6])/255,2)/100;
+							}
+
+							Edit13->Text = fPanelLvRangeInEDID[0][0];
+							Edit14->Text = fPanelLvRangeInEDID[0][1];
+							Edit15->Text = fPanelLvRangeInEDID[1][0];
+							Edit16->Text = fPanelLvRangeInEDID[1][1];
+
+							g_rtdGammaSetFreesyncIIEDIDLv(fPanelLvRange[0][0],fPanelLvRange[0][1]);
+						}
+
+						if(((chkbFreesync2On->Checked) && (Freesync2Cal)) ||((!chkbFreesync2On->Checked) && (ucHDRIGVersion >= 2) && (nFlowID == 0)))
+					    {
+					        Edit5->Text = fPanelRGBWxy[_R][0];
+					        Edit6->Text = fPanelRGBWxy[_R][1];
+					        Edit7->Text = fPanelRGBWxy[_G][0];
+					        Edit8->Text = fPanelRGBWxy[_G][1];
+					        Edit9->Text = fPanelRGBWxy[_B][0];
+					        Edit10->Text = fPanelRGBWxy[_B][1];
+
+							fPanelWhitexy[0] = MeaData.x;
+							fPanelWhitexy[1] = MeaData.y;
+
+							if(chkbHDROn->Checked)
+							{
+						        Edit11->Text = 0.3127;//fPanelWhitexy[0];//0.3127;
+						        Edit12->Text = 0.3290;//fPanelWhitexy[1];//0.3290;
+							}
+							else
+							{
+						        Edit11->Text = fPanelRGBWxy[_GRAY][0];
+						        Edit12->Text = fPanelRGBWxy[_GRAY][1];
+							}
+
+							Command[2] = 0xDF;
+							if(chkbFreesync2On->Checked)
+							{
+								Command[3] = TemCommand[3];//MaxBacklightMaxLv
+								Command[4] = TemCommand[4];//MaxBacklightMinLv
+								Command[5] = TemCommand[5];//MinBacklightMaxLv
+								Command[6] = TemCommand[6];//MinBacklightMinLv
+							}
+							else
+							{
+								Command[3] = 0x00;
+								Command[4] = 0x00;
+								Command[5] = 0x00;
+								Command[6] = 0x00;
+							}
+
+							Command[7] = ((INT)(fPanelRGBWxy[_R][0]*1024)) & 0x03;
+							Command[7] = (Command[7] << 2) | (((INT)(fPanelRGBWxy[_R][1]*1024)) & 0x03);
+							Command[7] = (Command[7] << 2) | (((INT)(fPanelRGBWxy[_G][0]*1024)) & 0x03);
+							Command[7] = (Command[7] << 2) | (((INT)(fPanelRGBWxy[_G][1]*1024)) & 0x03);
+							Command[8] = ((INT)(fPanelRGBWxy[_B][0]*1024)) & 0x03;
+							Command[8] = (Command[8] << 2) | (((INT)(fPanelRGBWxy[_B][1]*1024)) & 0x03);
+							if(chkbHDROn->Checked)
+							{
+								Command[8] = (Command[8] << 2) | (((INT)(0.3127/*fPanelWhitexy[0]*/*1024)) & 0x03);
+								Command[8] = (Command[8] << 2) | (((INT)(0.3290/*fPanelWhitexy[1]*/*1024)) & 0x03);
+							}
+							else
+							{
+								Command[8] = (Command[8] << 2) | (((INT)(fPanelRGBWxy[_GRAY][0]*1024)) & 0x03);
+								Command[8] = (Command[8] << 2) | (((INT)(fPanelRGBWxy[_GRAY][1]*1024)) & 0x03);
+							}
+							Command[9] = (BYTE)(fPanelRGBWxy[_R][0]*256);
+							Command[10] = (BYTE)(fPanelRGBWxy[_R][1]*256);
+							Command[11] = (BYTE)(fPanelRGBWxy[_G][0]*256);
+							Command[12] = (BYTE)(fPanelRGBWxy[_G][1]*256);
+							Command[13] = (BYTE)(fPanelRGBWxy[_B][0]*256);
+							Command[14] = (BYTE)(fPanelRGBWxy[_B][1]*256);
+
+
+							if(chkbHDROn->Checked)
+							{
+								Command[15] = (BYTE)(0.3127/*fPanelWhitexy[0]*/*256);
+								Command[16] = (BYTE)(0.3290/*fPanelWhitexy[1]*/*256);
+							}
+							else
+							{
+								Command[15] = (BYTE)(fPanelRGBWxy[_GRAY][0]*256);
+								Command[16] = (BYTE)(fPanelRGBWxy[_GRAY][1]*256);
+							}
+							Command[17] = CalculateCheckSum(17, Command);
+
+							//Show On UI
+							Edit17->Text = IntToHex(Command[7], 2);
+							Edit18->Text = IntToHex(Command[8], 2);
+							Edit19->Text = IntToHex(Command[9], 2);
+							Edit20->Text = IntToHex(Command[10], 2);
+							Edit21->Text = IntToHex(Command[11], 2);
+							Edit22->Text = IntToHex(Command[12], 2);
+							Edit23->Text = IntToHex(Command[13], 2);
+							Edit24->Text = IntToHex(Command[14], 2);
+							Edit25->Text = IntToHex(Command[15], 2);
+							Edit26->Text = IntToHex(Command[16], 2);
+
+					        ucLength = 18;
+
+							BYTE ucFS2EDIDCheckSum = 0;
+							for(int ii = 0; ii < 14 ; ii++)
+							{
+								ucFS2EDIDCheckSum += Command[3 + ii];
+							}
+
+					        if(chkbDebugOn->Checked)
+					        {
+					         	fout<<"=============Panel EDID============="<<endl;
+					         	fout<<"Command:"<<endl;
+					         	for(int dd = 0; dd < ucLength; dd++)
+					         	{
+					          		fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+					           		if(((dd + 1)%16) == 0)
+					           		{
+					            		fout<<endl;
+					           		}
+					          	}
+					            fout<<endl;
+					        }
+
+					      	if(!chkbNoCommu->Checked)
+					      	{
+					          	if(!SendCommand(ucLength, Command))
+					          	{
+					              	btnGo->Enabled = true;
+					              	return;
+					          	}
+					      	}
+
+
+							Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+						    Command[3] = 12; // Freesync2 EDID
+						    Command[4] = ucFS2EDIDCheckSum;
+						    Command[5] = CalculateCheckSum(5, Command);
+						    ucLength = 6;
+
+						    if(chkbDebugOn->Checked)
+						    {
+						        fout<<"=============FreeSync2CHECKSUM============="<<endl;
+						        fout<<"Command:"<<endl;
+						        for(int dd = 0; dd < ucLength; dd++)
+						        {
+						            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+						            if(((dd + 1)%16) == 0)
+						            {
+						                fout<<endl;
+						            }
+						        }
+						        fout<<endl;
+						    }
+
+						    if(!chkbNoCommu->Checked)
+						    {
+						        if(!SendCommand(ucLength, Command))
+						        {
+						            btnGo->Enabled = true;
+						            return;
+						        }
+						    }
+
+							Command[2] = i;
+						}
+
+	                    if(HDRCal)
+	                    {
+	                        edtPanelMaxLv->Text = MeaData.Lv;
+	                        InitialHDRParam(&strHDR);
+
+	                        HDRWhite.Lv = MeaData.Lv;
+	                        HDRWhite.x = MeaData.x;
+	                        HDRWhite.y = MeaData.y;
+
+	                         if( MeaData.Lv < 200) //HDR Min Lv   //200
+	                         {
+	                                fout.close();
+	                                fout2.close();
+	                                btnGo->Enabled = true;
+	                                ShowMessage("Panel Max Lv too Low for HDR");
+	                                return;
+	                         }
+	                    }
+	                }
+
+
+
+	                TimeCount2 = timeGetTime() - TimeStart2;
+	                fout2<<"SetLvxy: "<<TimeCount2<<endl;
+
+	                if((i - jj*7) == SRGB6)
+	                {
+	                    TimeStart2 = timeGetTime();
+
+	                    float sRGB_Pattern[7][3] = {0};
+	                    float AdobeRGB_Pattern[7][3] = {0};
+	                    float EBU_Pattern[7][3] = {0};
+	                    float Rec709_Pattern[7][3] = {0};
+	                    float DCIP3_Pattern[7][3] = {0};
+	                    float Bypass_Pattern[7][3] = {0};
+						float SMPTEC_Pattern[7][3] = {0};
+	                    float fMaxPanelLvPQ = 0;
+
+	                    int nOutNF = (g_rtdGammaGetPanelBitNum() == 8) ? 4080 : 4092;
+
+	                    if(loop == 1)
+	                    {
+	                        if(chkbHDROn->Checked)
+	                        {
+								GetLinearRGB(sRGB7, sRGB_Pattern, _BYPASS, 255, nOutNF);
+								//GetLinearRGB(sRGB7, AdobeRGB_Pattern, _BYPASS, 255, nOutNF);
+								//GetLinearRGB(sRGB7, EBU_Pattern, _BYPASS, 255, nOutNF);
+								//GetLinearRGB(sRGB7, Rec709_Pattern, _BYPASS, 255, nOutNF);
+								//GetLinearRGB(sRGB7, DCIP3_Pattern, _BYPASS, 255, nOutNF);
+								//GetLinearRGB(sRGB7, SMPTEC_Pattern, _BYPASS, 255, nOutNF);
+								GetLinearRGB(sRGB7, Bypass_Pattern, _HDR_BT2020, 255, nOutNF);
+	                        }
+							else
+							{
+								GetLinearRGB(sRGB7, sRGB_Pattern, _SRGB, 255, nOutNF);
+								GetLinearRGB(sRGB7, AdobeRGB_Pattern, _ADOBERGB, 255, nOutNF);
+								GetLinearRGB(sRGB7, EBU_Pattern, _EBU, 255, nOutNF);
+								GetLinearRGB(sRGB7, Rec709_Pattern, _REC_709, 255, nOutNF);
+								GetLinearRGB(sRGB7, DCIP3_Pattern, _DCI_P3, 255, nOutNF);
+								GetLinearRGB(sRGB7, SMPTEC_Pattern, _SMPTE_C, 255, nOutNF);
+							}
+	                    }
+	                    else
+	                    {
+	                   		GetLinearRGB(&LUT_Pattern[jj * 21], sRGB_Pattern, _SRGB, 255, nOutNF);
+	                        GetLinearRGB(&LUT_Pattern[jj * 21], AdobeRGB_Pattern, _ADOBERGB, 255, nOutNF);
+	                        GetLinearRGB(&LUT_Pattern[jj * 21], EBU_Pattern, _EBU, 255, nOutNF);
+	                        GetLinearRGB(&LUT_Pattern[jj * 21], Rec709_Pattern, _REC_709, 255, nOutNF);
+	                        GetLinearRGB(&LUT_Pattern[jj * 21], DCIP3_Pattern, _DCI_P3, 255, nOutNF);
+							GetLinearRGB(&LUT_Pattern[jj * 21], SMPTEC_Pattern, _SMPTE_C, 255, nOutNF);
+	                    }
+
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _SRGB, _SHIFT_0_BIT);
+
+	                    if(chkbLUTMode->Checked)
+	                    {
+	                        g_rtdColormapSaveMatrix(jj, _SRGB_ONLY, 0);
+	                    }
+
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _ADOBERGB, _SHIFT_0_BIT);
+
+	                    if(chkbLUTMode->Checked)
+	                    {
+	                        g_rtdColormapSaveMatrix(jj, _ADOBE_ONLY, 0);
+	                    }
+
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _USER_DEFINE, _SHIFT_0_BIT);
+
+	                    //Ryan for EBU
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _EBU, _SHIFT_0_BIT);
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _REC_709, _SHIFT_0_BIT);
+	                    g_rtdColormapGetColorMatrix(sRGB_Pattern, _DCI_P3, _SHIFT_0_BIT);
+						g_rtdColormapGetColorMatrix(sRGB_Pattern, _SMPTE_C, _SHIFT_0_BIT);
+						g_rtdColormapGetColorMatrix(sRGB_Pattern, _USER_DEFINE_2, _SHIFT_0_BIT);
+
+	                    if(HDRCal)
+	                    {
+	                    	g_rtdColormapSetHDRsRGBpanel(chkHDRsRGBpanel->Checked); // 20170214 Hung modify for HDR sRGBpanel
+							fMaxPanelLvPQ = g_rtdGammaGetMaxPanelLvPQ(strHDR.fMaxPanelLv, 10); // Hung HDR modify 20160819
+	                        g_rtdColormapGetHDRColorMatrix(Bypass_Pattern, _SHIFT_1_BIT, fMaxPanelLvPQ);
+	                    }
+
+	                }
+	                // Send Command
+	                if(i == nPatternEnd)
+	                {
+	                    Command[3] = g_rtdColormapGetColorSpace();
+
+	                    BYTE ucIndex = 1;
+	                    BYTE ucPreCommand[324*2] = {0};
+	                    int cnt = 0;
+
+	                    if(chkbLUTMode->Checked)
+	                    {
+	                        BYTE kk = 0;
+
+	                        for(kk = 0; kk < 17; kk++)
+	                        {
+	                            for(k = 0; k < 3; k++)
+	                            {
+	                                for(j = 0; j < 3; j++)
+	                                {
+	                                    WORD usCoef = g_rtdColormapGetLUTCofficient(_SRGB, kk, j, k);
+	                                    ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                    cnt++;
+	                                    ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                    cnt++;
+	                                }
+	                            }
+
+	                            if(kk == 0)
+	                            {
+	                                for(k = 0; k < 6; k++)
+	                                {
+	                                    ucPreCommand[cnt] = 0;    // get Coeficient
+	                                    cnt++;
+	                                }
+	                            }
+	                        }
+
+	                        for(kk = 0; kk < 17; kk++)
+	                        {
+	                            for(k = 0; k < 3; k++)
+	                            {
+	                                for(j = 0; j < 3; j++)
+	                                {
+	                                    WORD usCoef = g_rtdColormapGetLUTCofficient(_ADOBERGB, kk, j, k);
+	                                    ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                    cnt++;
+	                                    ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                    cnt++;
+	                                }
+	                            }
+
+	                            if(kk == 0)
+	                            {
+	                                for(k = 0; k < 6; k++)
+	                                {
+	                                    ucPreCommand[cnt] = 0;    // get Coeficient
+	                                    cnt++;
+	                                }
+	                            }
+	                        }
+	                    }
+	                    else
+	                    {
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_SRGB, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_ADOBERGB, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_USER_DEFINE, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+
+
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_EBU, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_REC_709, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_DCI_P3, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_SMPTE_C, j, k);
+	                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+	                                cnt++;
+	                            }
+	                        }
+							if(ucFWVersion >= 2)
+							{
+								for(k = 0; k < 3; k++)
+		                        {
+		                            for(j = 0; j < 3; j++)
+		                            {
+		                                WORD usCoef = g_rtdColormapGetCofficient(_USER_DEFINE_2, j, k);
+		                                ucPreCommand[cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+		                                cnt++;
+		                                ucPreCommand[cnt] = (usCoef >> 3) & 0xFF ;
+		                                cnt++;
+		                            }
+		                        }
+							}
+
+
+							//Ryan Debug
+							ucMatrixCheckSum = 0;
+							for(int ii = 0; ii < cnt ; ii++)
+							{
+								ucMatrixCheckSum += ucPreCommand[ii];
+							}
+							//Ryan for viewsonic
+	                        for(k = 0; k < 3; k++)
+	                        {
+	                            for(j = 0; j < 3; j++)
+	                            {
+	                                double Coef = g_rtdColormapGetPanelMatrix(j, k);
+	                                int usCoef =  Coef *100;
+	                                if(usCoef < 0)
+	                                usCoef = 65535 + usCoef + 1;
+	                                ucPreCommand[cnt] = (usCoef>>8);
+	                                cnt++;
+	                                ucPreCommand[cnt] = (usCoef & 0xFF) ;
+	                                cnt++;
+	                            }
+	                        }
+	                        //End of Ryan for viewsonic
+
+
+	                    }
+
+	                    int nIndex = 0;
+
+	                    while(cnt > 0)
+	                    {
+	                        memset(Command + 4, 0, 120);
+	                        int nLength = 0;
+
+	                        if(cnt > _ONE_TRAMSMIT_LIMIT - 3)
+	                        {
+	                            nLength = _ONE_TRAMSMIT_LIMIT - 3;
+	                        }
+	                        else
+	                        {
+	                            nLength = cnt;
+
+	                        }
+	                        memcpy(Command + 4, ucPreCommand + nIndex, nLength);
+
+	                        cnt -= nLength;
+
+	                        nIndex += nLength;
+	                        ucLength = nLength + 4;
+	                        Command[ucLength] = CalculateCheckSum(ucLength, Command);
+	                        ucLength++;
+
+	                        if(chkbDebugOn->Checked)
+	                        {
+	                            fout<<"=============Pattern"<<i<<"============="<<endl;
+	                            fout<<"Command:"<<endl;
+	                            for(int dd = 0; dd < ucLength; dd++)
+	                            {
+	                                fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+	                                if(((dd + 1)%16) == 0)
+	                                {
+	                                    fout<<endl;
+	                                }
+	                            }
+	                            fout<<endl;
+	                        }
+
+	                        TimeStart2 = timeGetTime();
+
+	                        if(!chkbNoCommu->Checked)
+	                        {
+	                            if(!SendCommand(ucLength, Command))
+	                            {
+	                                fout.close();
+	                                fout2.close();
+	                                btnGo->Enabled = true;
+	                                return;
+	                            }
+	                        }
+
+	                        TimeCount2 = timeGetTime() - TimeStart2;
+	                        fout2<<"Send Command: "<<TimeCount2<<endl;
+	                    }
+
+	                    TimeCount2 = timeGetTime() - TimeStart2;
+	                    fout2<<"Cal Matrix: "<<TimeCount2<<endl;
+
+	                    if(nFlowID == 0)
+	                    {
+			            	Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+		                    Command[3] = 4; // Color Matrix Mode
+		                    Command[4] = ucMatrixCheckSum;
+		                    Command[5] = CalculateCheckSum(5, Command);
+		                    ucLength = 6;
+
+		                    if(chkbDebugOn->Checked)
+		                    {
+		                     	fout<<"=============MATRIXCKSUM============="<<endl;
+		                     	fout<<"Command:"<<endl;
+		                     	for(int dd = 0; dd < ucLength; dd++)
+		                     	{
+		                      		fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                       		if(((dd + 1)%16) == 0)
+		                       		{
+		                        		fout<<endl;
+		                       		}
+		                      	}
+		                        fout<<endl;
+		                    }
+
+		                    if(!chkbNoCommu->Checked)
+		                    {
+		                     	if(!SendCommand(ucLength, Command))
+		                     	{
+		                      		btnGo->Enabled = true;
+		                      		return;
+		                     	}
+							}
+	                    }
+
+	                    if(HDRCal) // conflicked with OCC
+	                    {
+	                        BYTE ucMatrix[72] = {0};
+	                        BYTE ucIndex = 0;
+	                        BYTE ucIGLut[197] = {0};
+	                        BYTE ucHDRCheckSum  = 0;
+
+	                        // Hung HDR ofstream igout("Output/IG_HDR.txt");
+
+	                        for(BYTE k = 0; k < 3; k++)
+	                        {
+	                            for(BYTE j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_HDR_SRGB, j, k);
+	                                ucMatrix[ucIndex] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                                ucMatrix[ucIndex] = (usCoef >> 3) & 0xFF ;
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                            }
+	                        }
+
+	                        for(BYTE k = 0; k < 3; k++)
+	                        {
+	                            for(BYTE j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_HDR_ADOBERGB, j, k);
+	                                ucMatrix[ucIndex] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                                ucMatrix[ucIndex] = (usCoef >> 3) & 0xFF ;
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                            }
+	                        }
+
+	                        for(BYTE k = 0; k < 3; k++)
+	                        {
+	                            for(BYTE j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_HDR_DCIP3_D65, j, k);
+	                                ucMatrix[ucIndex] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                                ucMatrix[ucIndex] = (usCoef >> 3) & 0xFF ;
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                            }
+	                        }
+
+	                        for(BYTE k = 0; k < 3; k++)
+	                        {
+	                            for(BYTE j = 0; j < 3; j++)
+	                            {
+	                                WORD usCoef = g_rtdColormapGetCofficient(_HDR_BT2020, j, k);
+	                                ucMatrix[ucIndex] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                                ucMatrix[ucIndex] = (usCoef >> 3) & 0xFF ;
+	                                ucHDRCheckSum += (ucMatrix[ucIndex] & 0xFF);
+	                                ucIndex++;
+	                            }
+	                        }
+
+							// Hung HDR
+	                        Command[2] = 0xBD;
+		                    memcpy(Command + 3, ucMatrix, 72);
+		                    Command[75] = CalculateCheckSum(75, Command);
+		                    ucLength = 76;
+
+		                    if(!chkbNoCommu->Checked)
+		                    {
+		                        if(!SendCommand(ucLength, Command))
+		                        {
+		                            fout.close();
+		                            return;
+		                        }
+		                    }
+
+	                        for(int loop = 0; loop < ucHDRIGNum; loop++) // 20170123 Hung modify 6 -> 8 adding 540 nits tone mapping
+	                        {
+								//combHighLvChange(this);
+								g_rtdGammaGetHDRInitial((loop/2), &strHDR); // 20170123 Hung the first parameter sholud < 4 accoding to DLL version
+								InitialHDRParam(&strHDR);
+
+								switch(loop)
+								{
+									case 0:
+									strHDR.fMaxContentLv = 1200;
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 1:
+									strHDR.fMaxContentLv = 1200;
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 2:
+									strHDR.fMaxContentLv = 4000;
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 3:
+									strHDR.fMaxContentLv = 4000;
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 4:
+									strHDR.fMaxContentLv = 10000;
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 5:
+									strHDR.fMaxContentLv = 10000;
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 6:
+									strHDR.fMaxContentLv = 540;
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 7:
+									strHDR.fMaxContentLv = 540;
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 0;
+									break;
+
+									case 8:
+									if(chkHDRCVFromFW->Checked) // Hung 20171123 for HDR HDRDisplay
+								    {
+										strHDR.fMaxContentLv = fMaxCLL;
+									}
+									else
+									{
+									    strHDR.fMaxContentLv = strHDR.fMaxPanelLv;
+									}
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 1;
+									break;
+
+									case 9:
+								    if(chkHDRCVFromFW->Checked) // Hung 20171123 for HDR HDRDisplay
+								    {
+									    strHDR.fMaxContentLv = fMaxCLL;
+									}
+									else
+									{
+										strHDR.fMaxContentLv = strHDR.fMaxPanelLv;
+									}
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 1;
+									break;
+
+									case 10:
+									strHDR.fMaxContentLv = fMaxFALL;
+									strHDR.ucMode = 0;
+									strHDR.ucByPass = 1;
+									break;
+
+									case 11:
+									strHDR.fMaxContentLv = fMaxFALL;
+									strHDR.ucMode = 1;
+									strHDR.ucByPass = 1;
+									break;
+
+									default:
+									strHDR.fMaxContentLv = 1200;
+									strHDR.ucMode = 0;
+									break;
+	                         	}
+
+
+	                        	g_rtdGammaGetInputGammaToneMappingLUT(&strHDR);
+
+
+							    for(int i = 0, j = 0; i < 129; i = i + 2, j = j + 3)
+							    {
+							        if(strHDR.pnIGLUT[i] > 4095)
+							        {
+							          	strHDR.pnIGLUT[i] = strHDR.pnIGLUT[i] >>2;
+
+									  	if(strHDR.pnIGLUT[i] > 4095)
+									  		strHDR.pnIGLUT[i] = strHDR.pnIGLUT[i] >>2;
+							        }
+
+							        if(strHDR.pnIGLUT[i+1] > 4095)
+							        {
+							          	strHDR.pnIGLUT[i+1] = strHDR.pnIGLUT[i+1] >>2;
+
+									  	if(strHDR.pnIGLUT[i+1] > 4095)
+									  		strHDR.pnIGLUT[i+1] = strHDR.pnIGLUT[i+1] >>2;
+							        }
+
+							        ucIGLut[j] = (strHDR.pnIGLUT[i] >> 4) & 0xFF;
+
+							        if(i != 128)
+							        {
+							          	ucIGLut[j + 1] = ((strHDR.pnIGLUT[i] & 0x0F) << 4) | ((strHDR.pnIGLUT[i + 1] >> 8) & 0x0F);
+							          	ucIGLut[j + 2] = strHDR.pnIGLUT[i + 1] & 0xFF;
+							        }
+							        else
+							        {
+							          	ucIGLut[j + 1] = ((strHDR.pnIGLUT[128] & 0x0F) << 4);
+							          	ucIGLut[j + 2] = 0;
+							        }
+
+									ucHDRCheckSum += (ucIGLut[j] & 0xFF);
+									ucHDRCheckSum += (ucIGLut[j+1] & 0xFF);
+									ucHDRCheckSum += (ucIGLut[j+2] & 0xFF);
+
+									 // igout<<IntToHex((int)ucIGLut[j], 2).c_str()<<" ";
+									 // igout<<IntToHex((int)ucIGLut[j+1], 2).c_str()<<" ";
+									 // igout<<IntToHex((int)ucIGLut[j+2], 2).c_str()<<" ";
+									 // igout << endl;
+
+								}
+
+								ucIGLut[195] = strHDR.pnTHD[0];
+								ucIGLut[196] = strHDR.pnTHD[1];
+
+								ucHDRCheckSum += (ucIGLut[195] & 0xFF);
+								ucHDRCheckSum += (ucIGLut[196] & 0xFF);
+
+								// igout<<IntToHex((int)ucIGLut[195], 2).c_str()<<" ";
+								// igout<<IntToHex((int)ucIGLut[196], 2).c_str()<<" ";
+
+
+		                        Command[2] = 0xBC;
+		                        Command[3] = (loop & 0x0F);
+
+		                        nIndex = 0;
+		                        cnt = 197;
+		                        while(cnt > 0)
+		                        {
+									memset(Command + 4, 0, 120);
+		                           	int nLength = 0;
+
+									if(cnt > _ONE_TRAMSMIT_LIMIT - 3)
+									{
+										nLength = _ONE_TRAMSMIT_LIMIT - 3;
+									}
+									else
+									{
+										nLength = cnt;
+
+									}
+		                          	memcpy(Command + 4, ucIGLut + nIndex, nLength);
+
+									cnt -= nLength;
+
+									nIndex += nLength;
+									ucLength = nLength + 4;
+									Command[ucLength] = CalculateCheckSum(ucLength, Command);
+									ucLength++;
+
+									/*
+									if(chkbDebugOn->Checked)
+									{
+									// igout<<"=============Pattern"<<i<<"============="<<endl;
+									// igout<<"Command:"<<endl;
+									for(int dd = 0; dd < ucLength; dd++)
+									{
+									    igout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+									    if(((dd + 1)%16) == 0)
+									    {
+									        igout<<endl;
+									    }
+									}
+									igout<<endl;
+									}
+									*/
+
+		                           	if(!chkbNoCommu->Checked)
+		                           	{
+		                            	if(!SendCommand(ucLength, Command))
+		                            	{
+		                                	btnGo->Enabled = true;
+		                                	return;
+		                            	}
+		                           	}
+		                       	}
+							}
+							// igout<<IntToHex((int)ucHDRCheckSum, 2).c_str()<<" ";
+							// igout.close();
+/////////////////////////////////////////////////////////////////////////////////////////////
+						    Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+						    Command[3] = 6; // HDR Mode
+						    Command[4] = ucHDRCheckSum;
+						    Command[5] = CalculateCheckSum(5, Command);
+						    ucLength = 6;
+
+						    if(chkbDebugOn->Checked)
+						    {
+						        fout<<"=============HDRCHECKSUM============="<<endl;
+						        fout<<"Command:"<<endl;
+						        for(int dd = 0; dd < ucLength; dd++)
+						        {
+						            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+						            if(((dd + 1)%16) == 0)
+						            {
+						                fout<<endl;
+						            }
+						        }
+						        fout<<endl;
+						    }
+
+						    if(!chkbNoCommu->Checked)
+						    {
+						        if(!SendCommand(ucLength, Command))
+						        {
+						            btnGo->Enabled = true;
+						            return;
+						        }
+						    }
+
+							int nLowerUpperBound[2] = {0};
+							Command[2] = 0xD0;
+
+							if(chkHDRCVFromFW->Checked)
+							{
+								g_rtdGammaGetNoToneMappingBound(fMaxCLL, 10, nLowerUpperBound);
+							}
+							else
+							{
+								edtLv->Text = strHDR.fMaxPanelLv;
+								btnAutoGetCVClick(this);
+								fMaxCLL = 50 * pow(2,((float)MaxCLL_CV)/32);
+								g_rtdGammaGetNoToneMappingBound(fMaxCLL, 10, nLowerUpperBound);
+							}
+
+							Command[3] = (nLowerUpperBound[0] >> 8) & 0xFF;
+							Command[4] = nLowerUpperBound[0] & 0xFF;
+							Command[5] = (nLowerUpperBound[1] >> 8) & 0xFF;
+							Command[6] = nLowerUpperBound[1] & 0xFF;
+							g_rtdGammaGetNoToneMappingBound(fMaxFALL, 10, nLowerUpperBound);
+							Command[7] = (nLowerUpperBound[0] >> 8) & 0xFF;
+							Command[8] = nLowerUpperBound[0] & 0xFF;
+							Command[9] = (nLowerUpperBound[1] >> 8) & 0xFF;
+							Command[10] = nLowerUpperBound[1] & 0xFF;
+							Command[11] = MaxCLL_CV;
+							Command[12] = CalculateCheckSum(12, Command);
+
+							ucLength = 13;
+							BYTE ucHDR10NOTMBoundCheckSum = 0;
+							for(int ii = 0; ii < 9 ; ii++)
+							{
+								ucHDR10NOTMBoundCheckSum += Command[3 + ii];
+							}
+
+					        if(chkbDebugOn->Checked)
+					        {
+					         	fout<<"=============Panel EDID============="<<endl;
+					         	fout<<"Command:"<<endl;
+					         	for(int dd = 0; dd < ucLength; dd++)
+					         	{
+					          		fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+					           		if(((dd + 1)%16) == 0)
+					           		{
+					            		fout<<endl;
+					           		}
+					          	}
+					            fout<<endl;
+					        }
+
+					      	if(!chkbNoCommu->Checked)
+					      	{
+					          	if(!SendCommand(ucLength, Command))
+					          	{
+					              	btnGo->Enabled = true;
+					              	return;
+					          	}
+					      	}
+
+
+							Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+						    Command[3] = 14; // HDR10 No Tone Mapping Bound CheckSum
+						    Command[4] = ucHDR10NOTMBoundCheckSum;
+						    Command[5] = CalculateCheckSum(5, Command);
+						    ucLength = 6;
+
+						    if(chkbDebugOn->Checked)
+						    {
+						        fout<<"=============FreeSync2CHECKSUM============="<<endl;
+						        fout<<"Command:"<<endl;
+						        for(int dd = 0; dd < ucLength; dd++)
+						        {
+						            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+						            if(((dd + 1)%16) == 0)
+						            {
+						                fout<<endl;
+						            }
+						        }
+						        fout<<endl;
+						    }
+
+						    if(!chkbNoCommu->Checked)
+						    {
+						        if(!SendCommand(ucLength, Command))
+						        {
+						            btnGo->Enabled = true;
+						            return;
+						        }
+						    }
+
+						}
+
+						if(LocalDimCal == _TRUE)
+						{
+						  	BYTE ucGammaNum = combGammaNum->ItemIndex + 1;
+						  	BYTE ucIGLut[197] = {0};
+						  	BYTE ucLDCheckSum  = 0;
+						  	BYTE ucRGBGainSum  = 0;
+
+						  	ofstream igout("Output/IG_LDSDR.txt");
+
+						  	for(int dd = 0; dd < ucGammaNum; dd++)
+						  	{
+
+						    	g_rtdGammaGetLocalDimmingIGLUT(&strHDR, dd);
+
+						    	for(int i = 0, j = 0; i < 129; i = i + 2, j = j + 3)
+						    	{
+						        	if(strHDR.pnIGLUT[i] > 4095)
+						        	{
+						          		strHDR.pnIGLUT[i] = strHDR.pnIGLUT[i] >>2;
+
+								  		if(strHDR.pnIGLUT[i] > 4095)
+								  			strHDR.pnIGLUT[i] = strHDR.pnIGLUT[i] >>2;
+						        	}
+
+						        	if(strHDR.pnIGLUT[i+1] > 4095)
+						        	{
+						          		strHDR.pnIGLUT[i+1] = strHDR.pnIGLUT[i+1] >>2;
+
+								  		if(strHDR.pnIGLUT[i+1] > 4095)
+								  			strHDR.pnIGLUT[i+1] = strHDR.pnIGLUT[i+1] >>2;
+						        	}
+
+						        	ucIGLut[j] = (strHDR.pnIGLUT[i] >> 4) & 0xFF;
+
+						        	if(i != 128)
+						        	{
+						          		ucIGLut[j + 1] = ((strHDR.pnIGLUT[i] & 0x0F) << 4) | ((strHDR.pnIGLUT[i + 1] >> 8) & 0x0F);
+						          		ucIGLut[j + 2] = strHDR.pnIGLUT[i + 1] & 0xFF;
+						        	}
+							        else
+							        {
+							          	ucIGLut[j + 1] = ((strHDR.pnIGLUT[128] & 0x0F) << 4);
+							          	ucIGLut[j + 2] = 0;
+							        }
+
+									ucLDCheckSum += (ucIGLut[j] & 0xFF);
+									ucLDCheckSum += (ucIGLut[j+1] & 0xFF);
+									ucLDCheckSum += (ucIGLut[j+2] & 0xFF);
+
+									igout<<IntToHex((int)ucIGLut[j], 2).c_str()<<" ";
+									igout<<IntToHex((int)ucIGLut[j+1], 2).c_str()<<" ";
+									igout<<IntToHex((int)ucIGLut[j+2], 2).c_str()<<" ";
+									igout << endl;
+
+						    	}
+
+								ucIGLut[195] = strHDR.pnTHD[0];
+								ucIGLut[196] = strHDR.pnTHD[1];
+
+								ucLDCheckSum += (ucIGLut[195] & 0xFF);
+								ucLDCheckSum += (ucIGLut[196] & 0xFF);
+
+								igout<<IntToHex((int)ucIGLut[195], 2).c_str()<<" ";
+								igout<<IntToHex((int)ucIGLut[196], 2).c_str()<<" ";
+
+
+							    Command[2] = 0xC0;
+							    Command[3] = (dd & 0x0F);
+
+							    nIndex = 0;
+							    cnt = 197;
+							    while(cnt > 0)
+							    {
+									memset(Command + 4, 0, 120);
+									int nLength = 0;
+
+									if(cnt > _ONE_TRAMSMIT_LIMIT - 3)
+									{
+										nLength = _ONE_TRAMSMIT_LIMIT - 3;
+									}
+									else
+									{
+										nLength = cnt;
+
+									}
+									memcpy(Command + 4, ucIGLut + nIndex, nLength);
+
+									cnt -= nLength;
+
+									nIndex += nLength;
+									ucLength = nLength + 4;
+									Command[ucLength] = CalculateCheckSum(ucLength, Command);
+									ucLength++;
+
+									if(!chkbNoCommu->Checked)
+									{
+										if(!SendCommand(ucLength, Command))
+										{
+											btnGo->Enabled = true;
+											return;
+										}
+									}
+							    }
+							}
+
+							if(chkbOGCEnable->Checked)
+							{
+								nRGBGainNum = g_rtdGammaPatternWhite(HDRWhite, ucType, ucPreCommand);
+
+								ucRGBGainSum = g_rtdGammaCalculateTotalCheckSum(OGC_RGB_GAIN,0);
+
+								ofstream foutld("Output/LD RGB gain.txt");
+
+								for(int kk = 0; kk < nRGBGainNum; kk++)
+								{
+									foutld<<"0x"<<IntToHex((int)ucPreCommand[kk], 2).c_str()<<",";
+
+									if(((kk+1)%16) == 0)
+									{
+									  	foutld<<endl;
+									}
+
+								}
+								foutld.close();
+
+								int nLength = nRGBGainNum;
+								int nPointer = 0;
+
+								Command[2] = 0xC0;
+								Command[3] = 0x10; // LD Gain write
+
+								if(nLength > 0)
+								{
+									while(nLength > 0)
+									{
+									    BYTE ucOneLen = 0;
+									    if(nLength > _ONE_TRAMSMIT_LIMIT)
+									    {
+									        ucOneLen = _ONE_TRAMSMIT_LIMIT;
+									        nLength = nLength - _ONE_TRAMSMIT_LIMIT;
+									    }
+									    else
+									    {
+									        ucOneLen = nLength;
+									        nLength = 0;
+									    }
+
+									    memcpy(Command + 4, ucPreCommand + nPointer, ucOneLen);
+									    Command[4 + ucOneLen] = CalculateCheckSum(4 + ucOneLen, Command);
+									    nPointer += ucOneLen;
+									    ucLength = 5 + ucOneLen;
+
+									    if(!chkbNoCommu->Checked)
+									    {
+									        if(!SendCommand(ucLength, Command))
+									        {
+									            btnGo->Enabled = true;
+									            return;
+									        }
+									    }
+									}
+								}
+					            nRGBGainNum = g_rtdGammaPatternWhite(PanelNativeW, ucType, ucPreCommand);
+							}
+
+							igout<<IntToHex((int)ucLDCheckSum, 2).c_str()<<" ";
+							igout<<IntToHex((int)ucRGBGainSum, 2).c_str()<<" ";
+							ucLDCheckSum = ucLDCheckSum + ucRGBGainSum;
+							igout<<IntToHex((int)ucLDCheckSum, 2).c_str()<<" ";
+							igout.close();
+							/////////////////////////////////////////////////////////////////////////////////////////////
+							Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+							Command[3] = 10; // Local Dimming IG Mode
+							Command[4] = ucLDCheckSum;
+							Command[5] = CalculateCheckSum(5, Command);
+							ucLength = 6;
+
+							if(!chkbNoCommu->Checked)
+							{
+							    if(!SendCommand(ucLength, Command))
+							    {
+							        btnGo->Enabled = true;
+							        return;
+							    }
+							}
+		                }
+					}
+		            else
+		            {
+		                Command[3] = CalculateCheckSum(3, Command);
+		                ucLength = 4;
+
+		                if(chkbDebugOn->Checked)
+		                {
+		                    fout<<"=============Pattern"<<i<<"============="<<endl;
+		                    fout<<"Command:"<<endl;
+		                    for(int dd = 0; dd < ucLength; dd++)
+		                    {
+		                        fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+		                        if(((dd + 1)%16) == 0)
+		                        {
+		                            fout<<endl;
+		                        }
+		                    }
+		                    fout<<endl;
+		                }
+
+		                TimeStart2 = timeGetTime();
+
+		                if(!chkbNoCommu->Checked)
+		                {
+		                    if(!SendCommand(ucLength, Command))
+		                    {
+		                        fout.close();
+		                        return;
+		                    }
+		                }
+
+		                TimeCount2 = timeGetTime() - TimeStart2;
+		                fout2<<"Send Command: "<<TimeCount2<<endl;
+		                TimeStart = timeGetTime();
+
+		                Sleep(200);
+		            }
+
+		        }
+	        	Application->ProcessMessages();
+	    	}
+
+			if(Freesync2Cal)
+			{
+				//Freesync2 Panel Native sRGB Matrix
+				int cnt = 0;
+				Command[2] = 0xDC;
+	            for(k = 0; k < 3; k++)
+	            {
+	                for(j = 0; j < 3; j++)
+	                {
+	                    WORD usCoef = 0;
+	                    Command[3 + cnt] = ((usCoef & 0x07) << 5) | ((usCoef>>11) & 0x01);    // get Coeficient
+	                    cnt++;
+	                    Command[3 + cnt] = (usCoef >> 3) & 0xFF ;
+	                    cnt++;
+	                }
+	            }
+
+				BYTE ucFS2MatrixCheckSum = 0;
+				for(int ii = 0; ii < cnt ; ii++)
+				{
+					ucFS2MatrixCheckSum += Command[3 + ii];
+				}
+				Command[3 + cnt] = CalculateCheckSum(3 + cnt, Command);
+				cnt++;
+
+				ucLength = 3 + cnt;
+
+				if(chkbDebugOn->Checked)
+			    {
+			        fout << "=============Freesync II Matrix=============" << endl;
+			        fout << "Command:"<<endl;
+			        for(int dd = 0; dd < ucLength; dd++)
+			        {
+			            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+			            if(((dd + 1)%16) == 0)
+			            {
+			                fout<<endl;
+			            }
+			        }
+			        fout<<endl;
+			    }
+
+			    TimeStart = timeGetTime();
+
+			    if(!chkbNoCommu->Checked)
+			    {
+			        if(!SendCommand(ucLength, Command))
+			        {
+			            fout.close();
+			            fout2.close();
+			            fout3.close();
+						fout4.close();
+						fout5.close();
+			            btnGo->Enabled = true;
+			            return;
+			        }
+			    }
+
+			    TimeCount = timeGetTime() - TimeStart;
+
+				if(TimeCount < nInterval)
+				{
+					Sleep(nInterval);
+				}
+
+				//Freesync2 IG LUT
+				BYTE ucFS2IGLut[197] = {0};
+				BYTE ucFS2CheckSum  = 0;
+
+				ofstream igout("Output/IG_FreeSync2LUT.txt");
+
+				for(int dd = 0; dd < 5; dd++)
+				{
+
+					g_rtdGammaGetFreesync2IGLUT(&strFS2, dd);
+
+					for(int i = 0, j = 0; i < 129; i = i + 2, j = j + 3)
+					{
+					    if(strFS2.pnIGLUT[i] > 4095)
+					    {
+					      	strFS2.pnIGLUT[i] = strFS2.pnIGLUT[i] >>2;
+
+						  	if(strFS2.pnIGLUT[i] > 4095)
+						  		strFS2.pnIGLUT[i] = strFS2.pnIGLUT[i] >>2;
+					    }
+
+					    if(strFS2.pnIGLUT[i+1] > 4095)
+					    {
+					      	strFS2.pnIGLUT[i+1] = strFS2.pnIGLUT[i+1] >>2;
+
+						  	if(strFS2.pnIGLUT[i+1] > 4095)
+						  		strFS2.pnIGLUT[i+1] = strFS2.pnIGLUT[i+1] >>2;
+					    }
+
+					    ucFS2IGLut[j] = (strFS2.pnIGLUT[i] >> 4) & 0xFF;
+
+					    if(i != 128)
+					    {
+					      	ucFS2IGLut[j + 1] = ((strFS2.pnIGLUT[i] & 0x0F) << 4) | ((strFS2.pnIGLUT[i + 1] >> 8) & 0x0F);
+					      	ucFS2IGLut[j + 2] = strFS2.pnIGLUT[i + 1] & 0xFF;
+					    }
+					    else
+					    {
+					      	ucFS2IGLut[j + 1] = ((strFS2.pnIGLUT[128] & 0x0F) << 4);
+					      	ucFS2IGLut[j + 2] = 0;
+					    }
+
+						ucFS2CheckSum += (ucFS2IGLut[j] & 0xFF);
+						ucFS2CheckSum += (ucFS2IGLut[j+1] & 0xFF);
+						ucFS2CheckSum += (ucFS2IGLut[j+2] & 0xFF);
+
+						igout<<IntToHex((int)ucFS2IGLut[j], 2).c_str()<<" ";
+						igout<<IntToHex((int)ucFS2IGLut[j+1], 2).c_str()<<" ";
+						igout<<IntToHex((int)ucFS2IGLut[j+2], 2).c_str()<<" ";
+						igout << endl;
+
+					}
+
+					ucFS2IGLut[195] = strFS2.pnTHD[0];
+					ucFS2IGLut[196] = strFS2.pnTHD[1];
+
+					ucFS2CheckSum += (ucFS2IGLut[195] & 0xFF);
+					ucFS2CheckSum += (ucFS2IGLut[196] & 0xFF);
+
+					igout<<IntToHex((int)ucFS2IGLut[195], 2).c_str()<<" ";
+					igout<<IntToHex((int)ucFS2IGLut[196], 2).c_str()<<" ";
+					igout << endl;
+
+					Command[2] = 0xDB;
+					Command[3] = (dd & 0x0F);
+
+					int nIndex = 0;
+					int cnt = 197;
+					while(cnt > 0)
+					{
+						memset(Command + 4, 0, 120);
+						int nLength = 0;
+
+						if(cnt > _ONE_TRAMSMIT_LIMIT - 3)
+						{
+							nLength = _ONE_TRAMSMIT_LIMIT - 3;
+						}
+						else
+						{
+							nLength = cnt;
+						}
+						memcpy(Command + 4, ucFS2IGLut + nIndex, nLength);
+
+						cnt -= nLength;
+
+						nIndex += nLength;
+						ucLength = nLength + 4;
+						Command[ucLength] = CalculateCheckSum(ucLength, Command);
+						ucLength++;
+
+						if(!chkbNoCommu->Checked)
+						{
+							if(!SendCommand(ucLength, Command))
+							{
+								btnGo->Enabled = true;
+								return;
+							}
+						}
+					}
+				}//for(int dd = 0; dd < 5; dd++)
+
+				Command[2] = 0xBE; // 0xBE is HDR CheckSum Command
+			    Command[3] = 13; // Freesync2 IG
+			    Command[4] = ucFS2CheckSum;
+			    Command[5] = CalculateCheckSum(5, Command);
+			    ucLength = 6;
+
+			    if(chkbDebugOn->Checked)
+			    {
+			        fout<<"=============FreeSync2CHECKSUM============="<<endl;
+			        fout<<"Command:"<<endl;
+			        for(int dd = 0; dd < ucLength; dd++)
+			        {
+			            fout<<IntToHex((int)Command[dd], 2).c_str()<<" ";
+			            if(((dd + 1)%16) == 0)
+			            {
+			                fout<<endl;
+			            }
+			        }
+			        fout<<endl;
+			    }
+
+			    if(!chkbNoCommu->Checked)
+			    {
+			        if(!SendCommand(ucLength, Command))
+			        {
+			            btnGo->Enabled = true;
+			            return;
+			        }
+			    }
+
+		    }//if(Freesync2Cal)
+
+		}
+
+
+		fout3<<"};"<<endl;
+
+
+	    if(rgActionMode->ItemIndex == 1)
+	    {
+			strMessage += "and Verify ";
+
+			if(nFlowID == 0)
+			{
+		        if(chkbOGCEnable->Checked)
+		        {
+		            btnVerifyOGCClick(this);
+		        }
+
+		        if(chkbOCCEnable->Checked)
+		        {
+		            btnVerifyOCCClick(this);
+		        }
+			}
+
+		    if(DicomCal)
+		    {
+		        if(chkbDICOMEnable->Checked)
+		        {
+		            btnVerifyDICOMClick(this);
+		        }
+            }
+	    }
+
+	}
+
+    if(g_bOCCVerifyOK)
+    {
+        edtSN->Text = "";
+    }
+
+    TimeCount1 = timeGetTime() - TimeStart1;
+
+    strMessage += "Time is: "+ IntToStr(TimeCount1)+" ms";
+    lblTime->Caption = strMessage;
+    lblTime->Visible = true;
+
+	if(chkbFreesync2On->Checked)
+	{
+		if(chkbFreesyncIIVerify->Checked)
+		{
+        	btnVerifyFreesync2Click(this);
+		}
+	}
+
+    if(chkbHDROn->Checked) //Set HDR Mode
+    {
+       	if(chkbSetHDRMode->Checked)
+       	{
+	    	SendHDREndCommand();
+       	}
+
+        if(chkHDRVerify->Checked)
+        {
+            btnVerifyHDRClick(this);
+        }
+    }
+
+	if(chkbSendEndCommand->Checked)
+    {
+        SendEndCommand();
+    }
+
+    fout.close();
+    fout2.close();
+    fout3.close();
+	fout4.close();
+	fout5.close();
+    btnGo->Enabled = true;
+}
+
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::btnDisconnectClick(TObject *Sender)
+{
+    caDisConnect();
+    lblConnectResult->Font->Color = clRed;
+    lblConnectResult->Caption = "No Connect";
+    btnConnect->Enabled = true;
+}
+//---------------------------------------------------------------------------
+WORD __fastcall TfrmDemo::CheckVerifyStatus()
+{
+    WORD wCheckStatus = 0;
+
+    if(chkbsRGB->Checked)
+    {
+        wCheckStatus |= (0x01<<_SRGB);
+    }
+    if(chkbAdobeRGB->Checked)
+    {
+        wCheckStatus |= (0x01<<_ADOBERGB);
+    }
+    if(chkbUserDefine->Checked)
+    {
+        wCheckStatus |= (0x01<<_USER_DEFINE);
+    }
+    if(chkbEBU->Checked)
+    {
+        wCheckStatus |= (0x01<<_EBU);
+    }
+    if(chkbSoftProof->Checked)
+    {
+        wCheckStatus |= (0x01<<_SOFT_PROOF);
+    }
+    if(chkbRec709->Checked)
+    {
+        wCheckStatus |= (0x01<<_REC_709);
+    }
+    if(chkbDCIP3->Checked)
+    {
+        wCheckStatus |= (0x01<<_DCI_P3);
+    }
+	if(chkbSMPTEC->Checked)
+	{
+        wCheckStatus |= (0x01<<_SMPTE_C);
+	}
+	if(chkbUserDefine2->Checked)
+	{
+		wCheckStatus |= (0x01<<_USER_DEFINE_2);
+	}
+    return wCheckStatus;
+}
+
+
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::btnVerifyOCCClick(TObject *Sender)
+{
+    COLOR_INPUT_STRUCT *sRGBVerify = new COLOR_INPUT_STRUCT[256];
+    int step, number;
+    int cnt = 0;
+
+    int nPatternLength = rgOccVerifyPattern->ItemIndex == 0 ? 7 : 32;
+    int *Pattern =  rgOccVerifyPattern->ItemIndex == 0 ? sRGB7 : sRGB32;
+
+    g_ucVerifyType |= (1 << OCC);
+
+    switch(frmDemo->rgOCCGammaVerify->ItemIndex)
+    {
+        case 0:
+                step = 257;
+                number = 0;
+                break;
+
+        case 1:
+        default:
+                step = 8;
+                number = 32;
+                break;
+
+        case 2:
+                step = 4;
+                number = 64;
+                break;
+    }
+
+
+    WORD wCheckStatus = CheckVerifyStatus();
+
+	fGamutPoint[_PANEL_ORG][0][0] = fPanelRGBWxy[0][0];
+    fGamutPoint[_PANEL_ORG][0][1] = fPanelRGBWxy[0][1];
+    fGamutPoint[_PANEL_ORG][1][0] = fPanelRGBWxy[1][0];
+    fGamutPoint[_PANEL_ORG][1][1] = fPanelRGBWxy[1][1];
+    fGamutPoint[_PANEL_ORG][2][0] = fPanelRGBWxy[2][0];
+    fGamutPoint[_PANEL_ORG][2][1] = fPanelRGBWxy[2][1];
+
+    fGamutPoint[_USER_DEFINE][0][0] = StrToFloat(edtRx->Text);
+    fGamutPoint[_USER_DEFINE][0][1] = StrToFloat(edtRy->Text);
+    fGamutPoint[_USER_DEFINE][1][0] = StrToFloat(edtGx->Text);
+    fGamutPoint[_USER_DEFINE][1][1] = StrToFloat(edtGy->Text);
+    fGamutPoint[_USER_DEFINE][2][0] = StrToFloat(edtBx->Text);
+    fGamutPoint[_USER_DEFINE][2][1] = StrToFloat(edtBy->Text);
+
+    fGamutPoint[_USER_DEFINE_2][0][0] = StrToFloat(edtRx2->Text);
+    fGamutPoint[_USER_DEFINE_2][0][1] = StrToFloat(edtRy2->Text);
+    fGamutPoint[_USER_DEFINE_2][1][0] = StrToFloat(edtGx2->Text);
+    fGamutPoint[_USER_DEFINE_2][1][1] = StrToFloat(edtGy2->Text);
+    fGamutPoint[_USER_DEFINE_2][2][0] = StrToFloat(edtBx2->Text);
+    fGamutPoint[_USER_DEFINE_2][2][1] = StrToFloat(edtBy2->Text);
+
+    for(int j = 0; j < _BYPASS;  j++)
+    {
+        if((wCheckStatus & (0x01 << j))!= 0)
+        {
+        	if(!chkbNonSetPCM->Checked)
+        	{
+	            if(!SetColorDomain(j))
+	            {
+	                return;
+	            }
+        	}
+
+            OCCSendCommandandMeasure(sRGBVerify, Pattern, nPatternLength);
+            frmTest->ShowGamutandMeasure(j, sRGBVerify, nPatternLength);
+            //frmTest->OCCDeltaEChartandReportForCustomer(j, sRGBVerify, nPatternLength, edtModuleName->Text, edtSN->Text, edtTester->Text);
+            frmTest->OCCDeltaEChartandReport(j, sRGBVerify, nPatternLength);
+			if(number != 0)
+			{
+				OGCSendCommandandMeasure(sRGBVerify, step, number, _GRAY);
+	            //frmTest->OCCGammaCTChartandReportForCustomer(j, sRGBVerify, number, edtModuleName->Text, edtSN->Text, edtTester->Text);
+	            frmTest->OCCGammaCTChartandReport(j, sRGBVerify, number);
+			}
+        }
+    }
+
+    delete []sRGBVerify;
+    ShowVerifyResult(g_bOCCVerifyOK);
+    frmTest->ShowReportUI(g_ucVerifyType);
+    frmTest->Show();
+}
+
+
+void __fastcall TfrmDemo::btnVerifyOGCClick(TObject *Sender)
+{
+    g_ucVerifyType |= (1 << OGC);
+    BYTE ReceData[16];
+    BYTE ucFinalCT = (combFinalCT->Text == "Native") ? 0x0F : combFinalCT->ItemIndex; // Show No. 0 CT  (combCT1)
+    BYTE ucFinalGamma = combFinalGamma->ItemIndex; // Show No. 0 Gamma  (combGammaNo1)
+
+    COLOR_INPUT_STRUCT *OGCMeasure = new COLOR_INPUT_STRUCT[1024];
+
+    if(!SetGamma(ucFinalGamma, ucFinalCT))
+    {
+        return;
+    }
+
+    int step, number;
+
+    switch(frmDemo->rgVerifyStepOGC->ItemIndex)
+    {
+        case 0:
+                step = 32;
+                number = 8;
+                break;
+
+        case 1:
+                step = 16;
+                number = 16;
+                break;
+
+        case 2:
+                step = 8;
+                number = 32;
+                break;
+        case 3:
+                step = 4;
+                number = 64;
+                break;
+        default:
+                step = 1;
+                number = 256;
+                break;
+    }
+
+    if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _GRAY))
+    {
+        return;
+    }
+
+    frmTest->OGCChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number);
+
+    if(chkbVerifyRGBGamma->Checked)
+    {
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _R))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _R);
+
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _G))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _G);
+
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _B))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _B);
+    }
+
+    delete []OGCMeasure;
+    OGCMeasure = NULL;
+
+    //frmTest->ShowReportUI(g_ucVerifyType);
+    frmTest->Show();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::btnVerifyDICOMClick(TObject *Sender) // Hung DICOM
+{
+    BYTE ReceData[16];
+    COLOR_INPUT_STRUCT *DICOMMeasure = new COLOR_INPUT_STRUCT[1024];
+
+    if(!SetDICOM())
+    {
+        return;
+    }
+
+    int step, number;
+    if(chkbTG18On -> Checked)
+    {
+    	g_ucVerifyType |= (1 << (DICOM + 1));
+        step = 15;
+        number = 18;
+        if(!OGCSendCommandandMeasure(DICOMMeasure, step, number, _GRAY))
+        {
+        return;
+        }
+	    TimeCount1 = timeGetTime() - TimeStart1;
+
+	    frmTest->TG18ChartandReport(DICOMMeasure, number, step, (combPanelBitNum->ItemIndex == 1)?  10 : 8);
+
+	    delete []DICOMMeasure;
+	    DICOMMeasure = NULL;
+	    frmTest->ShowReportUI(g_ucVerifyType);
+	    frmTest->Show();
+    }
+    else
+    {
+    	g_ucVerifyType |= (1 << DICOM);
+	    switch(frmDemo->rgDICOMVerifyStep->ItemIndex)
+	    {
+	        case 0:
+	                step = 32;
+	                number = 8;
+	                break;
+
+	        case 1:
+	                step = 16;
+	                number = 16;
+	                break;
+
+	        case 2:
+	                step = 8;
+	                number = 32;
+	                break;
+	        case 3:
+	                step = 4;
+	                number = 64;
+	                break;
+	        default:
+	                step = 1;
+	                number = 256;
+	                break;
+	    }
+
+
+	    if(!OGCSendCommandandMeasure(DICOMMeasure, step, number, _GRAY))
+	    {
+	        return;
+	    }
+	    TimeCount1 = timeGetTime() - TimeStart1;
+
+	    frmTest->DICOMChartandReport(DICOMMeasure, number, (combPanelBitNum->ItemIndex == 1)?  10 : 8);
+
+	    delete []DICOMMeasure;
+	    DICOMMeasure = NULL;
+	    frmTest->ShowReportUI(g_ucVerifyType);
+	    frmTest->Show();
+    }
+}
+
+void __fastcall TfrmDemo::btnStopClick(TObject *Sender)
+{
+    m_bStop = true;
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TfrmDemo::btnCheckFWClick(TObject *Sender)
+{
+    CheckFW();
+	Initial();
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TfrmDemo::FormShow(TObject *Sender)
+{
+    if(FileExists("Config.dat"))
+    {
+        LoadConfig();
+        //BYTE ucIndexGamma = combFinalGamma->ItemIndex;
+        //BYTE ucIndexCT = combFinalCT->ItemIndex;
+        combCTNumChange(this);
+        combGammaNumChange(this);
+        ReArrangeFinalGamma();
+        ReArrangeFinalCT();
+       // combFinalCT->ItemIndex = ucIndexCT;
+        //combFinalGamma->ItemIndex = ucIndexGamma;
+
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::chkbOGCEnableClick(TObject *Sender)
+{
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::edtCommandChange(TObject *Sender)
+{
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::edtChannelNumChange(TObject *Sender)
+{
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::rgActionModeClick(TObject *Sender)
+{
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::edtWaitTimeChange(TObject *Sender)
+{
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combGammaNo1Change(TObject *Sender)
+{
+    ReArrangeFinalGamma();
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT1Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+    //SaveConfig();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::btnShowPatternClick(TObject *Sender)
+{
+    fGamutPoint[_PANEL_ORG][0][0] = fPanelRGBWxy[0][0];
+    fGamutPoint[_PANEL_ORG][0][1] = fPanelRGBWxy[0][1];
+    fGamutPoint[_PANEL_ORG][1][0] = fPanelRGBWxy[1][0];
+    fGamutPoint[_PANEL_ORG][1][1] = fPanelRGBWxy[1][1];
+    fGamutPoint[_PANEL_ORG][2][0] = fPanelRGBWxy[2][0];
+    fGamutPoint[_PANEL_ORG][2][1] = fPanelRGBWxy[2][1];
+
+    fGamutPoint[_USER_DEFINE][0][0] = StrToFloat(edtRx->Text);
+    fGamutPoint[_USER_DEFINE][0][1] = StrToFloat(edtRy->Text);
+    fGamutPoint[_USER_DEFINE][1][0] = StrToFloat(edtGx->Text);
+    fGamutPoint[_USER_DEFINE][1][1] = StrToFloat(edtGy->Text);
+    fGamutPoint[_USER_DEFINE][2][0] = StrToFloat(edtBx->Text);
+    fGamutPoint[_USER_DEFINE][2][1] = StrToFloat(edtBy->Text);
+
+    fGamutPoint[_USER_DEFINE_2][0][0] = StrToFloat(edtRx2->Text);
+    fGamutPoint[_USER_DEFINE_2][0][1] = StrToFloat(edtRy2->Text);
+    fGamutPoint[_USER_DEFINE_2][1][0] = StrToFloat(edtGx2->Text);
+    fGamutPoint[_USER_DEFINE_2][1][1] = StrToFloat(edtGy2->Text);
+    fGamutPoint[_USER_DEFINE_2][2][0] = StrToFloat(edtBx2->Text);
+    fGamutPoint[_USER_DEFINE_2][2][1] = StrToFloat(edtBy2->Text);
+    frmTest->Show();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combGammaNumChange(TObject *Sender)
+{
+    for(int i = 1; i <= 5; i++)
+    {
+        TLabel *lblGamma;
+        TComboBox *combGammaNo;
+
+        if(this->FindComponent("lblGamma" + IntToStr(i)))
+        {
+            lblGamma = dynamic_cast<TLabel*>(this->FindComponent("lblGamma" + IntToStr(i)));
+        }
+
+        if(this->FindComponent("combGammaNo" + IntToStr(i)))
+        {
+            combGammaNo = dynamic_cast<TComboBox*>(this->FindComponent("combGammaNo" + IntToStr(i)));
+        }
+
+        if(i <= combGammaNum->ItemIndex + 1)
+        {
+            lblGamma->Visible = true;
+            combGammaNo->Visible = true;
+        }
+        else
+        {
+            lblGamma->Visible = false;
+            combGammaNo->Visible = false;
+        }
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCTNumChange(TObject *Sender)
+{
+    for(int i = 1; i <= 6; i++)
+    {
+        TLabel *lblCT;
+        TComboBox *combCT;
+
+        if(this->FindComponent("lblCT" + IntToStr(i)))
+        {
+            lblCT = dynamic_cast<TLabel*>(this->FindComponent("lblCT" + IntToStr(i)));
+        }
+
+        if(this->FindComponent("combCT" + IntToStr(i)))
+        {
+            combCT = dynamic_cast<TComboBox*>(this->FindComponent("combCT" + IntToStr(i)));
+        }
+
+        if(i <= combCTNum->ItemIndex + 1)
+        {
+            lblCT->Visible = true;
+            combCT->Visible = true;
+        }
+        else
+        {
+            lblCT->Visible = false;
+            combCT->Visible = false;
+        }
+    }
+}
+
+
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmDemo::chkbLimitLvClick(TObject *Sender)
+{
+    edtMaxLv->Enabled = chkbLimitLv->Checked;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::chkbDICOMLockCTClick(TObject *Sender)
+{
+    edtDICOMX->Enabled = chkbDICOMLockCT->Checked;
+    edtDICOMY->Enabled = chkbDICOMLockCT->Checked;
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::combGammaNo2Change(TObject *Sender)
+{
+    ReArrangeFinalGamma();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combGammaNo3Change(TObject *Sender)
+{
+    ReArrangeFinalGamma();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combGammaNo4Change(TObject *Sender)
+{
+    ReArrangeFinalGamma();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combGammaNo5Change(TObject *Sender)
+{
+    ReArrangeFinalGamma();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT2Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT3Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT4Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT5Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::combCT6Change(TObject *Sender)
+{
+    ReArrangeFinalCT();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::FormCreate(TObject *Sender)
+{
+    ReArrangeFinalCT();
+    ReArrangeFinalGamma();
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmDemo::btnSaveConfigClick(TObject *Sender)
+{
+    SaveConfig();
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::rgDICOMModeClick(TObject *Sender)
+{
+    if(rgDICOMMode->ItemIndex > 0)
+    {
+        chkbDICOMLockCT->Checked = false;
+        chkbDICOMLockCT->Enabled = false;
+    }
+    else
+    {
+        chkbDICOMLockCT->Enabled = true;
+    }
+}
+//---------------------------------------------------------------------------
+#define IG_STEP 128
+
+double NoneLinearToLinear(double dNoneLinearValue, BYTE ucColorDomainType)
+{
+    double dLinearValue = 0;
+
+    if(ucColorDomainType == _ADOBERGB)
+    {
+        dLinearValue = pow(dNoneLinearValue, 2.19921875);
+    }
+    else if(ucColorDomainType == _SMPTE_C)
+    {
+        dLinearValue = pow(dNoneLinearValue, 2.2);
+    }
+    else if(ucColorDomainType == _EBU)
+    {
+        dLinearValue = pow(dNoneLinearValue, 2.35);
+    }
+    else if(ucColorDomainType == _REC_709)
+    {
+        dLinearValue = pow(dNoneLinearValue, 2.4);
+    }
+    else if(ucColorDomainType == _DCI_P3)
+    {
+        dLinearValue = pow(dNoneLinearValue, 2.6);
+    }
+    else//((ucColorDomainType == _SRGB) || (ucColorDomainType == _USER_DEFINE)||(ucColorDomainType == _SOFT_PROOF))
+    {
+        if(dNoneLinearValue < 0.03928)
+        {
+        	dLinearValue = dNoneLinearValue / 12.92;
+        }
+        else
+        {
+			dLinearValue = pow(((dNoneLinearValue + 0.055) / 1.055), 2.4);
+        }
+    }
+
+
+    return dLinearValue;
+}
+
+//----------------------------------------------------------------------------
+BYTE GetTH(DWORD *pLUT, WORD usLUTLength, BYTE *ucTH)
+{
+    // LUT bit = 12; shift bit = 2;
+    UINT nTH = pow(2, 12);
+    BYTE ucMulti = pow(2, 2);
+    BYTE j = 0;
+
+    for(WORD i = 0; i < usLUTLength; i++)
+    {
+        if(pLUT[i] > nTH)
+        {
+            ucTH[j] = i - 1;
+            j++;
+            nTH = nTH * ucMulti;
+        }
+    }
+
+    return j;
+}
+
+void AutoSet(BYTE ucColorDomain)
+{
+    BYTE ucOutBit = 16;
+    BYTE ucShiftBit = 2;
+    UINT unInputNF = 4092; // 10->12bit data path
+    UINT unOutputNF = 1023 * pow(2, ucOutBit - 10); // Outbit = 16 as preset
+
+    double dLinearData;
+    WORD i, j, k;
+    DWORD *pLUTTemp;
+    int nMulti;
+    BYTE ucTH[3] = {0};
+
+    WORD usIGTable[IG_STEP + 1] = {0};
+
+    UINT nInterval = pow(2, 10 + 2) / IG_STEP;
+    BYTE ucTHNum = 0;
+
+    memset(usIGTable, 0, sizeof(WORD)*(IG_STEP + 1));
+    pLUTTemp = new DWORD [IG_STEP + 1];
+
+	// calculate value
+    for(i = 0, k = 0; i <= (WORD)unInputNF; i = i + nInterval, k++)
+    {
+         dLinearData = NoneLinearToLinear((double)i / unInputNF, ucColorDomain);
+         pLUTTemp[k] = (DWORD)(dLinearData * unOutputNF + 0.5);
+    }
+
+    pLUTTemp[IG_STEP] = unOutputNF;
+
+    ucTHNum = GetTH(pLUTTemp, IG_STEP + 1, ucTH);
+
+    // Get LUT
+    for(i = 0; i < IG_STEP; i++)
+    {
+    	for(j = 0; j < (ucTHNum - 1); j++)
+		{
+	        if((i > ucTH[j]) && (i <= ucTH[j + 1]))
+	        {
+	            nMulti = pow(2, ucShiftBit * (j + 1));
+	            pLUTTemp[i] = int((float)pLUTTemp[i] / nMulti + 0.5);
+                usIGTable[i] = (WORD)pLUTTemp[i];
+	        }
+            else if(i > ucTH[ucTHNum - 1])
+            {
+                nMulti = pow(2, ucShiftBit * ucTHNum);
+	            pLUTTemp[i] = int((float)pLUTTemp[i] / nMulti + 0.5);
+                usIGTable[i] = (WORD)pLUTTemp[i];
+            }
+            else
+            {
+                usIGTable[i] = (WORD)pLUTTemp[i];
+            }
+
+    	}
+	}
+
+    usIGTable[IG_STEP] = pLUTTemp[IG_STEP] / nMulti;
+    BYTE ucLUT[194] = {0};
+
+    for(i = 0, j = 0; i < 128; )
+    {
+        ucLUT[j] = (usIGTable[i] >> 4) & 0xFF;
+        ucLUT[j + 1] = ((usIGTable[i] & 0x0F) << 4) | (usIGTable[i + 1] >> 8) ;
+        ucLUT[j + 2] = (usIGTable[i + 1]) & 0xFF;
+        j = j + 3;
+        i = i + 2;
+    }
+
+    ucLUT[192] = (usIGTable[128] >> 4) & 0xFF;
+    ucLUT[193] = (usIGTable[128] & 0x0F) << 4;
+    ucLUT[194] = 0;
+
+	// to UI
+	ofstream fout("Output/IGTable.txt");
+	fout<<"BYTE code tPCM_USER_INPUT_GAMMA_TABLE[] ="<<endl;
+	fout<<"{"<<endl;
+
+    for(i = 0; i < 195; i = i+3)
+	{
+        fout<<"\t0x"<<IntToHex(ucLUT[i], 2).c_str()<<", ";
+        fout<<"0x"<<IntToHex(ucLUT[i + 1], 2).c_str()<<", ";
+        fout<<"0x"<<IntToHex(ucLUT[i + 2], 2).c_str()<<", "<<endl;
+    }
+
+    fout<<"\t0x"<<IntToHex(ucTH[0],2).c_str()<<", 0x"<<IntToHex(ucTH[1],2).c_str()<<endl;
+    fout<<"};";
+    fout.close();
+
+	// Dec to Hex
+
+    delete [] pLUTTemp;
+	pLUTTemp = NULL;
+
+}
+
+void __fastcall TfrmDemo::btnShowMeasureClick(TObject *Sender)
+{
+    frmMeasure->Show();
+}
+//---------------------------------------------------------------------------
+String GetFileVersion(char* filePath)
+{
+    DWORD dwHandle, dwLen;
+    UINT BufLen;
+    LPTSTR lpData;
+    VS_FIXEDFILEINFO *pFileInfo;
+    String strVersion = "";
+
+    dwLen = GetFileVersionInfoSize(filePath, &dwHandle);
+
+    if(!dwLen)
+    {
+        return NULL;
+    }
+
+    lpData = (LPTSTR) malloc (dwLen);
+
+    if(!lpData)
+    {
+        return NULL;
+    }
+
+    if(!GetFileVersionInfo(filePath, dwHandle, dwLen, lpData))
+    {
+        free(lpData);
+        return NULL;
+    }
+
+    if(VerQueryValue(lpData, "\\", (LPVOID *) &pFileInfo, (PUINT)&BufLen))
+    {
+        strVersion = IntToStr(HIWORD(pFileInfo->dwFileVersionMS)) + "." + IntToStr(LOWORD(pFileInfo->dwFileVersionMS)) + "."
+                  + IntToStr(HIWORD(pFileInfo->dwFileVersionLS)) + "."+ IntToStr(LOWORD(pFileInfo->dwFileVersionLS));
+        free(lpData);
+        return strVersion;
+    }
+
+    free(lpData);
+    return NULL;
+}
+
+#define _FLASH_PAGE_SIZE  4096
+
+void UserCommonFlashErasePage(BYTE ucBank, BYTE ucPage)
+{
+    int nStart = (ucBank<<16)|(ucPage<<12);
+    memset(ucFlash + nStart, 0x00, 4096);
+}
+
+
+
+void __fastcall TfrmDemo::Button2Click(TObject *Sender)
+{
+    BYTE ucLUT[3][2052] = {0};
+    STRUCT_ENUM_ERROR_TYPE Error = 0;
+    Error = g_stComm.WriteReg(0x9F, 0x09);
+    Error = g_stComm.WriteReg(0xD0, 0x02);
+    Error = g_stComm.WriteReg(0x9F, 0x00);
+
+    Error = g_stComm.WriteReg(0x67, 0x80);
+    g_stComm.ReadRegs(0x66, 2052, ucLUT[0], _INCTYPE_NONE);
+
+    Error = g_stComm.WriteReg(0x67, 0x90);
+    g_stComm.ReadRegs(0x66, 2052, ucLUT[1], _INCTYPE_NONE);
+
+    Error = g_stComm.WriteReg(0x67, 0xA0);
+    g_stComm.ReadRegs(0x66, 2052, ucLUT[2], _INCTYPE_NONE);
+
+    ofstream fout("Output/RGBGammaLUT.txt");
+    ofstream fout1("Output/RGBGammaLUT.bin", ios::binary);
+    fout<<"Index\t00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F"<<endl;
+    fout<<"======================================================="<<endl;
+
+    for(int i = 0; i < 2052; i++)
+    {
+        if((i%16) == 0)
+        {
+            fout<<"0x"<<IntToHex(i, 4).c_str()<<":\t";
+        }
+
+        fout<<IntToHex(ucLUT[0][i],2).c_str()<<" ";
+
+
+        if((i+1)%16 == 0)
+        {
+            fout<<endl;
+        }
+    }
+
+    for(int i = 0; i < 2052; i++)
+    {
+        if((i%16) == 0)
+        {
+            fout<<"0x"<<IntToHex(i, 4).c_str()<<":\t";
+        }
+
+        fout<<IntToHex(ucLUT[1][i],2).c_str()<<" ";
+
+
+        if((i+1)%16 == 0)
+        {
+            fout<<endl;
+        }
+    }
+
+    for(int i = 0; i < 2052; i++)
+    {
+        if((i%16) == 0)
+        {
+            fout<<"0x"<<IntToHex(i, 4).c_str()<<":\t";
+        }
+
+        fout<<IntToHex(ucLUT[2][i],2).c_str()<<" ";
+
+
+        if((i+1)%16 == 0)
+        {
+            fout<<endl;
+        }
+    }
+
+    fout1.write(ucLUT[0], 2052);
+    fout1.write(ucLUT[1], 2052);
+    fout1.write(ucLUT[2], 2052);
+    fout.close();
+    fout1.close();
+
+}
+
+#define _BIT5 0x20
+//---------------------------------------------------------------------------
+void SetBG(WORD usRed, WORD usGreen, WORD usBlue)
+{
+    STRUCT_ENUM_ERROR_TYPE enumError = _ERROR_SUCCESS;
+   // g_stComm.WriteReg(0x6C, 0x20);
+    enumError = g_stComm.WriteRegBit(0x6C, ~_BIT5, _BIT5);
+    enumError = g_stComm.WriteReg(0x6D, (usRed >> 2));
+    enumError = g_stComm.WriteReg(0x6D, (usGreen >> 2));
+    enumError = g_stComm.WriteReg(0x6D, (usBlue >> 2));
+    enumError = g_stComm.WriteReg(0x6D, ((usRed & 0x03) << 6) | ((usGreen & 0x03) << 4) | ((usBlue & 0x03) << 2));
+
+    enumError = g_stComm.WriteRegBit(0x6C, ~_BIT5, 0x00);
+    //g_stComm.WriteReg(0x6C, 0x00);
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::Button3Click(TObject *Sender)
+{
+    BYTE ucLength = 0;
+    BYTE ucCommmand[10] = {0x03, 0xFC, 0xAB};
+    int nPatternLen = 1024;
+    STRUCT_ENUM_ERROR_TYPE enumError = _ERROR_SUCCESS;
+
+    CA210DATASTRUCT CA210Data;
+    Lvxy MeaData;
+
+    ofstream fout("Panel1024GrayLv.csv");
+    fout<<"Lv"<<endl;
+
+    enumError = g_stComm.ScalerStop();
+    enumError = g_stComm.WriteReg(0x9F, 0x00);
+    enumError = g_stComm.WriteRegBit(0x28, ~_BIT5, _BIT5);
+
+    for(int i= 0; i < nPatternLen; i++)
+    {
+        SetBG(i, i, i);
+        Sleep(200);
+        CA210Data = caMeasure();
+        fout<<CA210Data.fLv<<endl;
+    }
+    fout.close();
+
+    enumError = g_stComm.WriteRegBit(0x28, ~_BIT5, 0);
+
+}
+
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmDemo::chkbMinLvModeClick(TObject *Sender)
+{
+        GroupBox10->Visible = chkbMinLvMode->Checked;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::USBTypeClick(TObject *Sender)
+{
+    STRUCT_ENUM_ERROR_TYPE enumError = _ERROR_SUCCESS;
+
+    if(USBType->ItemIndex)
+    {
+        enumError = g_stComm.SetCommByID(_ENUM_COMM_FTDIUSB);
+    }
+    else
+    {
+        enumError = g_stComm.SetCommByID(_ENUM_COMM_REALTEKUSB);
+    }
+
+    if(enumError != _ERROR_SUCCESS)
+    {
+        ShowMessage("Initial Communication failed!");
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::InitialHDRParam(HDR_STRUCT *strHDR)
+{
+    strHDR->fMaxPanelLv = StrToFloat(edtPanelMaxLv->Text);
+    strHDR->fMinPanelLv = StrToFloat(edtPanelMinLv->Text);
+    // Hung => no use parameter => strHDR->fMaxContentLv = StrToFloat(edtContentMaxLv->Text);
+
+    strHDR->fMinContentLv = 0.05; // Hung => no use parameter StrToFloat(edtContentMinLv->Text);
+    if(strHDR->fMinPanelLv < 0.05)
+    {
+		strHDR->fMinContentLv = strHDR->fMinPanelLv;
+	}
+    // strHDR->pfConH[0] = StrToFloat(edtContH0->Text);
+    // strHDR->pfConH[1] = StrToFloat(edtContH1->Text);
+    // strHDR->pfConH[2] = StrToFloat(edtContH2->Text);
+    // strHDR->pfConH[3] = StrToFloat(edtContH3->Text);
+    // strHDR->pfConH[4] = StrToFloat(edtContH4->Text);
+
+    // strHDR->pfConL[0] = StrToFloat(edtContL0->Text);
+    // strHDR->pfConL[1] = StrToFloat(edtContL1->Text);
+    // strHDR->pfConL[2] = StrToFloat(edtContL2->Text);
+    // strHDR->pfConL[3] = StrToFloat(edtContL3->Text);
+    // strHDR->pfConL[4] = StrToFloat(edtContL4->Text);
+
+    strHDR->ucMode = 0; // Hung => no use parameter => rgHDRMode->ItemIndex;
+    strHDR->ucByPass = 0;
+
+}
+
+void __fastcall TfrmDemo::chkbTG18OnClick(TObject *Sender)
+{
+        rgDICOMVerifyStep -> Enabled = !chkbTG18On -> Checked;
+}
+
+
+void __fastcall TfrmDemo::btnVerifyHDRClick(TObject *Sender)
+{
+    int *Pattern =  HDRVerify;
+    COLOR_INPUT_STRUCT *HDRMeasure = new COLOR_INPUT_STRUCT[256];
+
+    if(!HDRSendCommandandMeasure(HDRMeasure, Pattern))
+    {
+        return;
+    }
+
+     // frmTest->ShowGamutandMeasure(j, sRGBVerify, nPatternLength);
+    g_rtdColormapSetHDRsRGBpanel(chkHDRsRGBpanel->Checked); // 20170214 Hung modify for HDR sRGBpanel
+         frmTest->HDRVerifyChartandReport(3, HDRMeasure, StrToFloat(edtPanelMaxLv->Text));
+    // frmTest->OCCGammaCTChartandReport(j, sRGBVerify, number);
+
+    delete []HDRMeasure;
+    HDRMeasure = NULL;
+
+    ShowHDRVerifyResult(g_bHDRVerifyOK);
+    //frmTest->Show();
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::ApplyHDRParameterClick(TObject *Sender)
+{
+    BYTE Command[6] = {0x03, 0xFC, 0xBF, 0, 0, 0};
+    Command[3] = frmDemo->HDRType->ItemIndex*2 + frmDemo->rgHDRMode->ItemIndex ; // Set final HDR IG Index => 0 = 1200 without DarkEnhance  (range = 0~5) => by Hung 20160720
+    Command[4] = frmDemo->HDRColorMatrix->ItemIndex; // Set final HDR Color Matrix => 0 = sRGB, 1 = Adobe, 2 = DCI_P3, 3 = BT2020 (range = 0~3)=> by Hung 20160720
+    Command[5] = CalculateCheckSum(6, Command);
+    BYTE ucLength = 6;
+
+    if(!SendCommand(ucLength, Command))
+    {
+        return;
+    }
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TfrmDemo::btnVerifyLDOGCClick(TObject *Sender)
+{
+    g_ucVerifyType |= (1 << OGC);
+    BYTE ReceData[16];
+    BYTE ucFinalCT = (combFinalCT->Text == "Native") ? 0x0F : combFinalCT->ItemIndex; // Show No. 0 CT  (combCT1)
+    BYTE ucFinalGamma = combFinalGamma->ItemIndex; // Show No. 0 Gamma  (combGammaNo1)
+
+    COLOR_INPUT_STRUCT *OGCMeasure = new COLOR_INPUT_STRUCT[1024];
+
+    BYTE Command[10];
+    BYTE ucLength = 0;
+
+    Command[0] = 0x03;
+    Command[1] = HextoInt(frmDemo->edtCommand->Text.c_str(), 2);
+    Command[2] = 0xC0;
+    Command[3] = 0x20;
+    Command[4] = (ucFinalGamma<<4)|ucFinalCT;
+    Command[5] = CalculateCheckSum(5, Command);
+    ucLength = 6;
+
+    if(SendAndCheck(ucLength, Command, ReceData))
+    {
+
+    }
+    else
+    {
+      ShowMessage("Communication Error!");
+    }
+
+    int step, number;
+
+    switch(frmDemo->rgVerifyStepOGC->ItemIndex)
+    {
+        case 0:
+                step = 32;
+                number = 8;
+                break;
+
+        case 1:
+                step = 16;
+                number = 16;
+                break;
+
+        case 2:
+                step = 8;
+                number = 32;
+                break;
+        case 3:
+                step = 4;
+                number = 64;
+                break;
+        default:
+                step = 1;
+                number = 256;
+                break;
+    }
+
+    if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _GRAY))
+    {
+        return;
+    }
+
+    frmTest->OGCChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number);
+
+    if(chkbVerifyRGBGamma->Checked)
+    {
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _R))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _R);
+
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _G))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _G);
+
+        if(!OGCSendCommandandMeasure(OGCMeasure, step, number, _B))
+        {
+            return;
+        }
+
+        frmTest->OGCRGBGammaChartandReport(g_rtdGammaGetGammaIndex(ucFinalGamma), OGCMeasure, number, _B);
+    }
+
+    delete []OGCMeasure;
+    OGCMeasure = NULL;
+
+    //frmTest->ShowReportUI(g_ucVerifyType);
+    frmTest->Show();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmDemo::btnVerifyFreesync2Click(TObject *Sender)
+{
+    g_ucVerifyType |= (1 << FREESYNC2);
+    BYTE ReceData[16];
+    BYTE ucFinalEOTF = combFinalEOTF->ItemIndex; // Show No. 0 Gamma  (combGammaNo1)
+
+    COLOR_INPUT_STRUCT *FreesyncIIMeasure = new COLOR_INPUT_STRUCT[1024];
+
+    if(!SetFreesyncII(ucFinalEOTF))
+    {
+        return;
+    }
+
+    int step, number;
+
+    switch(frmDemo->rgVerifyStepFreesyncII->ItemIndex)
+    {
+        case 0:
+                step = 32;
+                number = 8;
+                break;
+
+        case 1:
+                step = 16;
+                number = 16;
+                break;
+
+        case 2:
+                step = 8;
+                number = 32;
+                break;
+        case 3:
+                step = 4;
+                number = 64;
+                break;
+        default:
+                step = 1;
+                number = 256;
+                break;
+    }
+
+    if(!OGCSendCommandandMeasure(FreesyncIIMeasure, step, number, _GRAY))
+    {
+        return;
+    }
+
+    frmTest->AMDHDRChartandReport(ucFinalEOTF, FreesyncIIMeasure, number,(combPanelBitNum->ItemIndex == 1)?  10 : 8);
+
+    delete []FreesyncIIMeasure;
+    FreesyncIIMeasure = NULL;
+
+    frmTest->ShowReportUI(g_ucVerifyType);
+    frmTest->Show();
+}
+//---------------------------------------------------------------------------
+void __fastcall TfrmDemo::btnAutoGetCVClick(TObject *Sender)
+{
+    float fLvInFW = StrToFloat(edtLv->Text);
+	if(chkHDRCVFromFW->Checked)
+	{
+	    MaxCLL_CV = g_rtdGammaGetMaxPanelLvEDIDCV(fLvInFW, 10, true);
+	}
+	else
+	{
+		MaxCLL_CV = g_rtdGammaGetMaxPanelLvEDIDCV(fLvInFW, 10, false);
+	}
+    edtCV->Text = IntToHex(MaxCLL_CV, 2);
+}
+//---------------------------------------------------------------------------
+
+
+
+
+
+void __fastcall TfrmDemo::chkHDRCVFromFWClick(TObject *Sender)
+{
+    if(!chkHDRCVFromFW->Checked)
+    {
+        edtMaxCLL->Enabled = false;
+        edtMaxFALL->Enabled = false;
+        edtMinCLL->Enabled = false;
+    }
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmDemo::btnCheckFWVersionClick(TObject *Sender)
+{
+    CheckFWVersion();
+	if(ucFWVersion < _DISP_CALIB_FW_VERSION)
+	{
+		ShowMessage("Firmware Version Error!Please Update to 1P:SVN2377,MtP:SVN2331");
+	}
+
+}
+//---------------------------------------------------------------------------
+

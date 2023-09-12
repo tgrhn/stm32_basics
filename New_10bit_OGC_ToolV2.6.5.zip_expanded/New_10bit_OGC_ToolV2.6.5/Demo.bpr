@@ -1,0 +1,180 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.06.00"/>
+    <PROJECT value="Demo.exe"/>
+    <OBJFILES value="Demo.obj Unit1.obj Dll\Ca210Ctrl_Export.obj Dll\OGCOCC_Export.obj 
+      FWDebug.obj CTVerify.obj DeltaEVerify.obj GammaVerify.obj GamutVerify.obj 
+      Test.obj GamutVerifySingle.obj Measure.obj Dll\Comm_Export.obj 
+      RGBGammaVerify.obj HDRStep.obj TG18Gamma.obj TG18Verify.obj"/>
+    <RESFILES value="Demo.res"/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES) Unit1.dfm CTVerify.dfm DeltaEVerify.dfm GammaVerify.dfm 
+      GamutVerify.dfm Test.dfm GamutVerifySingle.dfm Measure.dfm 
+      RGBGammaVerify.dfm HDRStep.dfm TG18Gamma.dfm TG18Verify.dfm"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value="tee.lib rtl.lib vcl.lib"/>
+    <SPARELIBS value="vcl.lib rtl.lib tee.lib"/>
+    <PACKAGES value="vcl.bpi rtl.bpi dbrtl.bpi vcldb.bpi vclx.bpi bdertl.bpi ibxpress.bpi 
+      dsnap.bpi cds.bpi bdecds.bpi qrpt.bpi teeui.bpi teedb.bpi tee.bpi 
+      vcldbx.bpi dss.bpi teeqr.bpi dsnapcrba.bpi dsnapcon.bpi bcbsmp.bpi 
+      vclie.bpi xmlrtl.bpi inet.bpi inetdbbde.bpi inetdbxpress.bpi inetdb.bpi 
+      nmfast.bpi webdsnap.bpi bcbie.bpi websnap.bpi soaprtl.bpi dclocx.bpi 
+      dbexpress.bpi dbxcds.bpi indy.bpi bcb2kaxserver.bpi adortl.bpi 
+      visualclx.bpi visualdbclx.bpi"/>
+    <PATHCPP value=".;Dll"/>
+    <PATHPAS value=".;"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
+    <RELEASELIBPATH value="$(BCB)\lib\release"/>
+    <LINKER value="ilink32"/>
+    <USERDEFINES value=""/>
+    <SYSDEFINES value="NO_STRICT"/>
+    <MAINSOURCE value="Demo.cpp"/>
+    <INCLUDEPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;Dll;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot;;Dll;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <WARNINGS value="-w-par"/>
+    <OTHERFILES value=""/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I&quot;C:\Program Files (x86)\Borland\CBuilder6\Projects&quot; -IDll 
+      -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix cpp -boa"/>
+    <CFLAG1 value="-Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -a8 -b- -k- -vi -c -tW -tWM"/>
+    <PFLAGS value="-$Y- -$L- -$D- -$A8 -v -JPHNE -M"/>
+    <RFLAGS value=""/>
+    <AFLAGS value="/mx /w2 /zn"/>
+    <LFLAGS value="-D&quot;&quot; -aa -Tpe -x -Gn"/>
+    <OTHERFILES value=""/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="c0w32.obj sysinit.obj $(OBJFILES)"/>
+    <ALLRES value="$(RESFILES)"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cp32mt.lib"/>
+    <OTHERFILES value=""/>
+  </LINKER>
+  <FILELIST>
+      <FILE FILENAME="Demo.res" FORMNAME="" UNITNAME="Demo.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Demo.cpp" FORMNAME="" UNITNAME="Demo" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Unit1.cpp" FORMNAME="frmDemo" UNITNAME="Unit1" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\CA210Ctrl.dll" FORMNAME="" UNITNAME="CA210Ctrl.dll" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Ca210Ctrl_Export.cpp" FORMNAME="" UNITNAME="Ca210Ctrl_Export.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Ca210Ctrl_Export.h" FORMNAME="" UNITNAME="Ca210Ctrl_Export.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Comm.dll" FORMNAME="" UNITNAME="Comm.dll" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Comm_Extern.h" FORMNAME="" UNITNAME="Comm_Extern.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Common.h" FORMNAME="" UNITNAME="Common.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\OGCOCC_Export.cpp" FORMNAME="" UNITNAME="OGCOCC_Export.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\OGCOCC_Export.h" FORMNAME="" UNITNAME="OGCOCC_Export.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="FWDebug.cpp" FORMNAME="" UNITNAME="FWDebug" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="CTVerify.cpp" FORMNAME="frmCTVerify" UNITNAME="CTVerify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="DeltaEVerify.cpp" FORMNAME="frmDeltaEVerify" UNITNAME="DeltaEVerify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="GammaVerify.cpp" FORMNAME="frmGammaVerify" UNITNAME="GammaVerify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="GamutVerify.cpp" FORMNAME="frmGamutVerify" UNITNAME="GamutVerify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Test.cpp" FORMNAME="frmTest" UNITNAME="Test" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="GamutVerifySingle.cpp" FORMNAME="frmGamutVerifySingle" UNITNAME="GamutVerifySingle" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Measure.cpp" FORMNAME="frmMeasure" UNITNAME="Measure" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\New_Usb_20150323\New_Usb_20150323\SourceFile\Comm_Include.h" FORMNAME="" UNITNAME="Comm_Include.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="Dll\Comm_Export.cpp" FORMNAME="" UNITNAME="Comm_Export" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="OGCOCC.dll" FORMNAME="" UNITNAME="OGCOCC.dll" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="RGBGammaVerify.cpp" FORMNAME="frmRGBGammaVerify" UNITNAME="RGBGammaVerify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="HDRStep.cpp" FORMNAME="Form2" UNITNAME="HDRStep" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Gamma.cpp" FORMNAME="frmTG18GammaVerify" UNITNAME="TG18Gamma" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Gamma.ddp" FORMNAME="" UNITNAME="TG18Gamma.ddp" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Gamma.dfm" FORMNAME="" UNITNAME="TG18Gamma.dfm" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Gamma.h" FORMNAME="" UNITNAME="TG18Gamma.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Verify.cpp" FORMNAME="frmTG18Verify" UNITNAME="TG18Verify" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Verify.ddp" FORMNAME="" UNITNAME="TG18Verify.ddp" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Verify.dfm" FORMNAME="" UNITNAME="TG18Verify.dfm" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="TG18Verify.h" FORMNAME="" UNITNAME="TG18Verify.h" CONTAINERID="" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
+  <BUILDTOOLS>
+  </BUILDTOOLS>
+
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=2052
+CodePage=936
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[HistoryLists\hlIncludePath]
+Count=6
+Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;Dll;$(BCB)\include;$(BCB)\include\vcl
+Item1=..\..\..\..\HDR\Simulation\Tool;C:\Program Files (x86)\Borland\CBuilder6\Projects;C:\Program Files\Borland\CBuilder6\Projects;Dll;ALG;$(BCB)\include;$(BCB)\include\vcl
+Item2=C:\Program Files\Borland\CBuilder6\Projects;Dll;ALG;$(BCB)\include;$(BCB)\include\vcl
+Item3=Dll;ALG;$(BCB)\include;$(BCB)\include\vcl
+Item4=$(BCB)\include;$(BCB)\include\vcl
+Item5=C:\Program Files\Borland\CBuilder6\Projects;D:\?目\原理\OGC&amp;OCC\OGCOCC dll demon Code_BCB;$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=6
+Item0=C:\Program Files (x86)\Borland\CBuilder6\Projects;Dll;$(BCB)\lib\obj;$(BCB)\lib
+Item1=..\..\..\..\HDR\Simulation\Tool;C:\Program Files (x86)\Borland\CBuilder6\Projects;C:\Program Files\Borland\CBuilder6\Projects;Dll;ALG;$(BCB)\lib\obj;$(BCB)\lib
+Item2=C:\Program Files\Borland\CBuilder6\Projects;Dll;ALG;$(BCB)\lib\obj;$(BCB)\lib
+Item3=Dll;ALG;$(BCB)\lib\obj;$(BCB)\lib
+Item4=$(BCB)\lib\obj;$(BCB)\lib
+Item5=C:\Program Files\Borland\CBuilder6\Projects;D:\?目\原理\OGC&amp;OCC\OGCOCC dll demon Code_BCB;$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=1
+Item0=_DEBUG
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl
+
+[Parameters]
+RunParams=
+Launcher=
+UseLauncher=0
+DebugCWD=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteLauncher=
+RemoteCWD=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+LinkCGLIB=0
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
+  </IDEOPTIONS>
+</PROJECT>

@@ -1,0 +1,13 @@
+Error 00828. 0x300010 (Thread 0x2D20):
+Resource leak: The object array (0x196713C) was never deleted
+
+The object array (0x0196713C) [size: 40960 bytes] was created with new[]
+Call Tree:
+   0x00413C96(=Demo.exe:0x01:012C96) D:\项目\2015年项目\OGC_OCC\新增Color Domain\6193\Tool\OGCOCC_Tool_ORG\Unit1.cpp#2975
+   0x004ABE36(=Demo.exe:0x01:0AAE36)
+   0x004AEB2C(=Demo.exe:0x01:0ADB2C)
+   0x004AEC64(=Demo.exe:0x01:0ADC64)
+   0x004AEB2C(=Demo.exe:0x01:0ADB2C)
+   0x004AE7A7(=Demo.exe:0x01:0AD7A7)
+
+------------------------------------------
