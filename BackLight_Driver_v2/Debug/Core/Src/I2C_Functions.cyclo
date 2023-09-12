@@ -1,0 +1,8 @@
+../Drivers/CMSIS/Include/core_cm0plus.h:741:22:__NVIC_EnableIRQ	2
+../Drivers/CMSIS/Include/core_cm0plus.h:850:22:__NVIC_SetPriority	2
+../Core/Src/I2C_Functions.c:15:6:_I2C_Struct_Init	1
+../Core/Src/I2C_Functions.c:25:6:I2C2_Master_Register_Init	1
+../Core/Src/I2C_Functions.c:44:6:I2C1_Slave_Register_Init	1
+../Core/Src/I2C_Functions.c:71:18:I2C2_Master_Write_to_Register	11
+../Core/Src/I2C_Functions.c:120:18:I2C2_Master_Read_from_Register	11
+../Core/Src/I2C_Functions.c:177:40:I2C1_IRQHandler	17
