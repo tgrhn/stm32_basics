@@ -1,8 +1,7 @@
 /*
  * LTR-329ALS-01_DS_V1.c
  *
- *  Created on: Oct 12, 2020
- *      Author: selim.ozcan
+
  */
 
 #include "LTR-329ALS-01_DS_V1.h"

@@ -1,8 +1,7 @@
 /*
  * I2C_Functions.h
  *
- *  Created on: Apr 30, 2021
- *      Author: deniz.gurhan
+ *
  */
 
 #ifndef INC_I2C_FUNCTIONS_H_

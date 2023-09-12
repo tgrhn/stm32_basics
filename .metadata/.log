@@ -5676,3 +5676,6 @@ org.eclipse.core.runtime.AssertionFailedException: null argument:
 	at org.eclipse.equinox.launcher.Main.invokeFramework(Main.java:659)
 	at org.eclipse.equinox.launcher.Main.basicRun(Main.java:596)
 	at org.eclipse.equinox.launcher.Main.run(Main.java:1467)
+
+!ENTRY org.eclipse.cdt.core 1 0 2023-09-12 16:04:10.812
+!MESSAGE Indexed 'BackLight_Driver_v2' (24 sources, 107 headers) in 2.04 sec: 10,012 declarations; 49,267 references; 3 unresolved inclusions; 26 syntax errors; 171 unresolved names (0.29%)

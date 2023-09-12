@@ -1,8 +1,7 @@
 /*
  * LighLevelDefine.h
  *
- *  Created on: Oct 12, 2020
- *      Author: selim.ozcan
+ *
  */
 
 #ifndef INC_LTR_329ALS_01_DS_V1_H_
